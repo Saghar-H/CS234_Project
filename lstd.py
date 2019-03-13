@@ -63,6 +63,7 @@ class LSTD:
         Lambda, abbreviated `lm`, is the bootstrapping parameter for the
         current timestep.
     """
-        self.z = (gamma * lambda_ * self.z + phi)/timestep
-        self.A += np.inner(self.z, (phi - gm * phi_next))/timestep
-        self.b += self.z * reward
+        beta = 1/(1+timestep)
+        self.z = (gamma * lambda_ * self.z + phi)
+        self.A += (1-beta) * self.A + beta * np.inner((phi - gm * phi_next), self.z)
+        self.b += (1-beta) * self.b + beta * self.z * reward
