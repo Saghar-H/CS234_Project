@@ -1,8 +1,9 @@
 import gym
+import gym_walk
 import numpy as np
 
 
-env = gym.make('gym-walk-0.0.1')
+env = gym.make('WalkSevenStates-v0')
 
 num_episodes = 20
 num_steps_per_episode = 200
