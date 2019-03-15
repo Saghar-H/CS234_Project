@@ -2,7 +2,7 @@
 Least-squares temporal difference learning, also known as LSTD(λ).
 """
 import numpy as np
-
+import pdb
 
 class LSTD:
     """Least-squares temporal difference learning.
@@ -32,13 +32,14 @@ class LSTD:
         to initialize it with the identity matrix multiplied by `epsilon`.
     """
         self.n = n
-        self.reset(epsilon)
-
-    def reset(self, epsilon=0):
-        """Reset weights, traces, and other parameters."""
-        self.z = np.zeros(self.n)
         self.A = np.eye(self.n) * epsilon
         self.b = np.zeros(self.n)
+        self.reset()
+
+    def reset(self):
+        """Reset weights, traces, and other parameters."""
+        self.z = np.zeros(self.n)
+
 
     @property
     def theta(self):
@@ -65,5 +66,6 @@ class LSTD:
     """
         beta = 1/(1+timestep)
         self.z = (gamma * lambda_ * self.z + phi)
-        self.A += (1-beta) * self.A + beta * np.inner((phi - gamma * phi_next), self.z)
-        self.b += (1-beta) * self.b + beta * self.z * reward
+        self.A = (1-beta) * self.A + beta * np.inner((phi - gamma * phi_next), self.z)
+        self.b = (1-beta) * self.b + beta * self.z * reward
+

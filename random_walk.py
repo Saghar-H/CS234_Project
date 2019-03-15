@@ -95,7 +95,7 @@ G = []
 
 
 # LSTD operator:
-LSTD_lambda = LSTD(num_features, epsilon=0.0001)
+LSTD_lambda = LSTD(num_features, epsilon=0.0)
 
 loss = []
 for ep in range(num_episodes):
@@ -105,26 +105,28 @@ for ep in range(num_episodes):
     state, reward, done, info = env.step(np.random.randint(env.action_space.n))
     episode_loss = 0
     timestep = 1
-
+    LSTD_lambda.reset()
     while not done:
         #env.render()
         ep_rewards.append(reward)
         ep_states.append(state)
         state_next, reward_next, done, info = env.step(np.random.randint(env.action_space.n))
-        LSTD_lambda.update(Phi[state-1,:], reward, Phi[state_next-1,:], gamma, lambda_, timestep)
+        LSTD_lambda.update(Phi[state,:], reward, Phi[state_next,:], gamma, lambda_, timestep)
         theta = LSTD_lambda.theta
         #print("A is: {0}".format(LSTD_lambda.A))
-        print("b is: {0}".format(LSTD_lambda.b))
+        #print("b is: {0}".format(LSTD_lambda.b))
         #print("z is: {0}".format(LSTD_lambda.z))
-        print("Theta is: {0}".format(theta))
+        #print("Theta is: {0}".format(theta))
         #print("State is: {0}".format(state))
         state = state_next
         reward = reward_next
         timestep += 1
     ep_rewards.append(reward)
     ep_states.append(state)
+    LSTD_lambda.update(Phi[state,:], reward, Phi[state,:], gamma, lambda_, timestep)
     ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
-    ep_loss = np.mean([(np.dot(Phi[ep_states[t]-1,:], theta) - ep_discountedrewards[t])**2 for t in range(len(ep_states))])
+    ep_loss = np.mean([(np.dot(Phi[ep_states[t],:], theta) - ep_discountedrewards[t])**2 for t in range(len(ep_states))])
+    #print('states:{0}'.format(ep_states))
     #print('Episode {0} loss is {1}'.format(ep, ep_loss))
     #print('Episode {0} rewards are {1}'.format(ep, ep_rewards))
     G.append(ep_discountedrewards)
