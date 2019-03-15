@@ -58,12 +58,12 @@ class LSTD:
     phi_next : array_like
         The observation/features from the next timestep.
     gamma : float
-        Gamma, abbreviated `gm`, the discount factor for the current state.
+        Gamma is the discount factor for the current state.
     lambda_ : float
-        Lambda, abbreviated `lm`, is the bootstrapping parameter for the
+        Lambda is the bootstrapping parameter for the
         current timestep.
     """
         beta = 1/(1+timestep)
         self.z = (gamma * lambda_ * self.z + phi)
-        self.A += (1-beta) * self.A + beta * np.inner((phi - gm * phi_next), self.z)
+        self.A += (1-beta) * self.A + beta * np.inner((phi - gamma * phi_next), self.z)
         self.b += (1-beta) * self.b + beta * self.z * reward
