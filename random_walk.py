@@ -35,7 +35,6 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
     I = np.eye(len(P), len(P[0]))
     phi_t = phi.transpose()
     V_t = V.transpose()
-    inv_P = np.linalg.inv(P)
     I_gamma_P = I - gamma*P
     print(I)
     print(P)
@@ -43,23 +42,23 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
     print(I - gamma*lstd_lambda*P)
     inv1 = np.linalg.inv(I - gamma*lstd_lambda*P)
     psi = phi_t @ D @ inv1 @ I_gamma_P
+    print('*****---- psi ----*****')
     print(psi)
     inv2 = np.linalg.inv(psi @ phi)
     H = phi @ inv2 @ psi
     d = np.diag(np.diag(I - H))
-    d_inv2 = np.linalg.inv(np.linalg.inv(d))
-    d_inv3 = np.linalg.inv(d_inv2)
     print('*****----H----*****')
     print(H)
     print('*****----diag(I-H)----*****')
     print(d)
+    d_inv2 = np.linalg.inv(np.linalg.inv(d))
+    d_inv3 = np.linalg.inv(d_inv2)
     print('*****----(diag(I-H))^(-2)----*****')
     print(d_inv2)
     print('*****----(diag(I-H))^(-3)----*****')
     print(d_inv3)
-    psi_gradient = gamma * phi_t @ D @ inv1 @ inv_P @ inv1 @ I_gamma_P
-    inv3 = np.linalg.inv(psi_gradient @ phi)
-    H_gradient = phi @ inv2 @ (psi_gradient - inv3 @ inv2 @ psi)
+    psi_gradient = gamma * phi_t @ D @ inv1 @ P @ inv1 @ I_gamma_P
+    H_gradient = phi @ inv2 @ (psi_gradient - psi_gradient @ phi @ inv2 @ psi)
     diag_H_gradient = np.diag(np.diag(H_gradient))
     print(H_gradient)
     H_V = phi @ theta
@@ -170,7 +169,6 @@ for ep in range(num_episodes):
     LSTD_lambda.update(Phi[state,:], reward, Phi[state,:], gamma, lambda_, timestep)
     ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
     ep_loss = np.mean([(np.dot(Phi[ep_states[t],:], theta) - ep_discountedrewards[t])**2 for t in range(len(ep_states))])
-    #print('states:{0}'.format(ep_states))
     #print('Episode {0} loss is {1}'.format(ep, ep_loss))
     #print('Episode {0} rewards are {1}'.format(ep, ep_rewards))
     G.append(ep_discountedrewards)
@@ -181,14 +179,16 @@ print('episode loss:{0}'.format(loss))
 print ("average loss: ", sum(loss) / num_episodes)
 print("#########")
 print("#### Compute CV Gradient #####")
-nS = 5
-nF = 3
-phi = np.random.rand(nS, nF)
-theta = np.random.rand(nF, 1)
-lstd_lambda = 0.5
-gamma = 1
-P = np.random.rand(nS, nS)
-V = np.random.rand(nS, 1)
-D = np.random.rand(nS, nS)
-compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D)
+#nS = 5
+#nF = 3
+#phi = np.random.rand(nS, nF)
+#theta = np.random.rand(nF, 1)
+#P = np.random.rand(nS, nS)
+#V = np.random.rand(nS, 1)
+#D = np.random.rand(nS, nS)
+print(P)
+#print(np.linalg.inv(P + np.ones(len(P), len(P)) * 1e-15))
+print('---------theta------------')
+print(theta)
+compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
 print("#########")
