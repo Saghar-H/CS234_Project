@@ -1,30 +1,26 @@
 import numpy as np
 
-class LOuTOCV:
-  """
-  Leave one tuple out cross validation
-  """
-  def __init__(self, lstd_lambda, theta):
-    """
-    Initialize parameters lambda and theta
-    """
-    self.lstd_lambda = lstd_lambda
-    self.theta = theta
-
-  def compute_cv_gradient(self):
-  def incremental_update(self, epsilon):
-    """
-    while not converge:
-    sample(s0, a0, r0, s1, a1, r1, ..., sT-1, aT-1, rT-1, sT)
-    calculate gradient CV withe respect to lambda
-    update lambda
-    update theta
-    """
-	old_theta = self.theta
-	while(self.theta - old_theta):
-        
-    
+def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
+    I = np.eye(len(P), len(P[0]))
+    print(I)
+    print(P)
+    print(gamma*lstd_lambda*P)
+    print(I - gamma*lstd_lambda*P)
+    inv1 = np.linalg.inv(I - gamma*lstd_lambda*P)
+    psi = np.dot(np.dot(np.dot(phi.transpose(), D), inv1), I - gamma*P) 
+    print(psi)
+    inv2 = np.linalg.inv(np.dot(psi, phi))
+    H = np.dot(np.dot(phi, inv2), psi)
+    print(H)
+               
 if __name__ == '__main__':
-    env = gym.make("FrozenLake-v0")
-    theta, lstd_lambda = incremental_update
-
+    nS = 5
+    nF = 3
+    phi = np.random.rand(nS, nF)
+    theta = np.random.rand(nF, 1)
+    lstd_lambda = 0.5
+    gamma = 1
+    P = np.random.rand(nS, nS)
+    V = np.random.rand(nS, 1)
+    D = np.random.rand(nS, nS)
+    compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D)
