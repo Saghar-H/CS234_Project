@@ -167,7 +167,7 @@ for ep in range(num_episodes):
         timestep += 1
     ep_rewards.append(reward)
     ep_states.append(state)
-	LSTD_lambda.update(Phi[state,:], reward, Phi[state,:], gamma, lambda_, timestep)
+    LSTD_lambda.update(Phi[state,:], reward, Phi[state,:], gamma, lambda_, timestep)
     ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
     ep_loss = np.mean([(np.dot(Phi[ep_states[t],:], theta) - ep_discountedrewards[t])**2 for t in range(len(ep_states))])
     #print('Episode {0} loss is {1}'.format(ep, ep_loss))
