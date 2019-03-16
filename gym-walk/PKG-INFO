@@ -1,0 +1,11 @@
+Metadata-Version: 1.0
+Name: gym-walk
+Version: 0.0.1
+Summary: Gym walk environment - useful to replicate Random Walk experiments
+Home-page: https://github.com/rldm/gym-walk
+Author: Miguel Morales
+Author-email: mimoralea@gmail.com
+License: MIT License
+Description-Content-Type: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
