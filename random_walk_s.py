@@ -106,18 +106,7 @@ def run_env_episodes(num_episodes):
         done = False
         ep_rewards = []
         ep_states = []
-        next_state, reward, done, info = env.step(random.randint(0, env.action_space.n - 1))
-        #print(cur_state, next_state, info, reward)
-        # if cur_state == 4:
-        #     reward = 1
-        # ep_rewards.append(reward)
-        # ep_states.append(cur_state)   
-        # D[cur_state] +=1
-        # total_steps +=1
-        cur_state = next_state
-        
         while not done:
-            #env.render()
             next_state, reward, done, info = env.step(random.randint(0, env.action_space.n - 1))
             D[cur_state] +=1
             total_steps +=1
@@ -159,14 +148,8 @@ for ep in range(num_episodes):
     ep_states = []
     next_state, reward, done, info = env.step(np.random.randint(env.action_space.n))
     episode_loss = 0
-    timestep = 1   
+    timestep = 0
     
-    # if cur_state != 4 and cur_state !=0:
-    #     reward = 0
-    #     LSTD_lambda.reset_boyan(cur_state)
-    #     LSTD_lambda.update_boyan(Phi[cur_state,:], reward, Phi[next_state,:], gamma, lambda_, timestep)
-    #     ep_rewards.append(reward)
-    #     ep_states.append(cur_state)
     LSTD_lambda.reset_boyan(cur_state)
     cur_state = next_state
     
@@ -184,12 +167,7 @@ for ep in range(num_episodes):
         #print("State is: {0}".format(state))
         cur_state = next_state
         timestep += 1
-#    ep_rewards.append(reward)
-#    ep_states.append(state)
 
-    
-    # if reward > 0 :
-    #     LSTD_lambda.update_boyan(Phi[state,:], reward, Phi[state,:], gamma, lambda_, timestep)
     theta = LSTD_lambda.theta
     ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
     #print('ep_discounted:{0}'.format(ep_discountedrewards))
