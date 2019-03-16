@@ -82,7 +82,7 @@ num_states = 5
 num_episodes = 80
 
 gamma = 0.95
-lambda_ = 0.5
+lambda_ = 0
 
 transition_probs = env.env.P
 
