@@ -41,6 +41,11 @@ class LSTD:
         self.z = np.zeros(self.n)
 
 
+    def reset_boyan(self, state):
+        """Reset weights, traces, and other parameters."""
+        self.z = np.zeros(self.n)
+        self.z[state] = 1
+
     @property
     def theta(self):
         """Compute the weight vector via `A^{-1} b`."""
@@ -69,3 +74,28 @@ class LSTD:
         self.A = (1-beta) * self.A + beta * np.inner((phi - gamma * phi_next), self.z)
         self.b = (1-beta) * self.b + beta * self.z * reward
 
+    def update_boyan(self, phi, reward, phi_next, gamma, lambda_, timestep):
+        """Update from new experience, i.e. from a transition `(x,r,xp)`.
+
+    Parameters
+    ----------
+    phi : array_like
+        The observation/features from the current timestep.
+    reward : float
+        The reward from the transition.
+    phi_next : array_like
+        The observation/features from the next timestep.
+    gamma : float
+        Gamma is the discount factor for the current state.
+    lambda_ : float
+        Lambda is the bootstrapping parameter for the
+        current timestep.
+    """
+        #pdb.set_trace()
+
+        self.A =  self.A + np.inner(np.reshape((phi - gamma * phi_next),(5,1)), 
+                                    np.transpose(np.reshape(self.z,(1,5))))
+        self.b = self.b +  self.z * reward
+        self.z = (lambda_ * gamma * self.z + phi_next)
+
+        #print('z:{0}, b:{1}'.format(self.z,self.b))
