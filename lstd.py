@@ -41,10 +41,10 @@ class LSTD:
         self.z = np.zeros(self.n)
 
 
-    def reset_boyan(self, state):
+    def reset_boyan(self, state, Phi):
         """Reset weights, traces, and other parameters."""
-        self.z = np.zeros(self.n)
-        self.z[state] = 1
+        #self.z = np.zeros(self.n)
+        self.z = Phi[state]
 
     @property
     def theta(self):
@@ -93,8 +93,8 @@ class LSTD:
     """
         #pdb.set_trace()
 
-        self.A =  self.A + np.inner(np.reshape((phi - gamma * phi_next),(5,1)), 
-                                    np.transpose(np.reshape(self.z,(1,5))))
+        self.A =  self.A + np.inner(np.reshape((phi - gamma * phi_next),(self.z.shape[0],1)), 
+                                    np.transpose(np.reshape(self.z,(1,self.z.shape[0]))))
         self.b = self.b +  self.z * reward
         self.z = (lambda_ * gamma * self.z + phi_next)
 
