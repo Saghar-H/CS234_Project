@@ -20,7 +20,6 @@ lambda_ = 0.1
 lr = 0.0001
 # One hot vector representations:
 # Phi = np.eye(num_states)
-Phi = np.random.rand(num_states, num_features)
 ##########################################################
 
 def init_env(env_name, seed):
@@ -120,19 +119,20 @@ def run_env_episodes(num_episodes):
 
 def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsilon=0.0):
     # LSTD operator:
+    env = init_env(env_name, seed)
     LSTD_lambda = LSTD(num_features, epsilon=0.0)
     G = []
     loss = []
     num_episodes = len(trajectories.keys())
     for ep in range(num_episodes):
         traj = trajectories[ep]
+        if len(traj) <= 1:
+           continue
         ep_rewards = []
         ep_states = []
         episode_loss = 0
         cur_state = traj[0][0]
         LSTD_lambda.reset_boyan(Phi[cur_state, :])
-        if len(traj) <= 1 :
-            continue
         for timestep in range(len(traj)):
             cur_state, reward, next_state, done = traj[timestep]
             LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], gamma, lambda_, timestep)
@@ -161,14 +161,15 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, 
     loss = []
     num_episodes = len(trajectories.keys())
     for ep in range(num_episodes):
+        print(ep)
         traj = trajectories[ep]
+        if len(traj) <= 1:
+           continue
         ep_rewards = []
         ep_states = []
         episode_loss = 0
         cur_state = traj[0][0]
         adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
-        if len(traj) <= 1:
-           continue
         for timestep in range(len(traj)):
             cur_state, reward, next_state, done = traj[timestep]
             adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], gamma, lambda_, timestep)
@@ -176,8 +177,11 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, 
             ep_states.append(cur_state)
         theta = adaptive_LSTD_lambda.theta
         if ep > 1000 :
-            lambda_ -= lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
-            print('current lambda:{0}'.format(lambda_))
+            new_lambda = lambda_ -  lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
+            print(new_lambda)
+            if new_lambda >= 0 and new_lambda <= 1:
+               lambda_ = new_lambda
+               print('current lambda:{0}'.format(lambda_))
         ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
         # print('ep_discounted:{0}'.format(ep_discountedrewards))
         if len(ep_discountedrewards) > 0:
@@ -193,7 +197,7 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, 
     return adaptive_LSTD_lambda, theta, loss, G
 
 
-def compute_CV_loss(trajectories, num_features, gamma, lambda_, epsilon=0.0):
+def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, epsilon=0.0):
     '''
     :param trajectories:
     :param num_features:
@@ -211,7 +215,7 @@ def compute_CV_loss(trajectories, num_features, gamma, lambda_, epsilon=0.0):
             # leave one tuple oto_trajectoriesout
             loto_trajectories = copy.deepcopy(trajectories)
             del loto_trajectories[i][j]
-            _, _, loss, _ = LSTD_algorithm(loto_trajectories, num_features, gamma, lambda_)
+            _, _, loss, _ = LSTD_algorithm(loto_trajectories,Phi, num_features, gamma, lambda_)
             loto_loss.append(loss)
     cv_loss = np.mean(loto_loss)
     return cv_loss
@@ -243,7 +247,7 @@ print(transition_probs)
 print('Generate Monte Carlo Estimates of D and V...')
 D, V, trajectories = run_env_episodes(num_episodes)
 print('Done finding D and V!')
-
+Phi = np.random.rand(num_states, num_features)
 # D = np.diag([0.12443139 ,0.24981192 ,0.25088312, 0.25018808 ,0.12468549])
 # V = np.array([0, 0.01776151, 0.071083, 0.26708894 ,1])
 
@@ -273,11 +277,12 @@ print("Theta: {0}".format(theta))
 # cv_loss = compute_CV_loss(trajectories, num_features, gamma, lambda_ )
 # print("########## Compute CV Loss ###########")
 # print("CV Loss: {0}".format(cv_loss))
-#print('Running the Adaptive LSTD Lambda Algorithm ...')
-#adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G = Adaptive_LSTD_algorithm(trajectories, num_features,
-#                                                                                          Phi, P, V, D, lr,
-#                                                                                          gamma, lambda_)
+print('Running the Adaptive LSTD Lambda Algorithm ...')
+adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G = Adaptive_LSTD_algorithm(trajectories, num_features,
+                                                                                          Phi, P, V, D, lr,
+                                                                                          gamma, lambda_)
 print('Finding optimal lambda')
 optimal_loss, optimal_lambda = find_optimal_lambda()
 #print(optimal_loss)
 print(optimal_lambda)
+
