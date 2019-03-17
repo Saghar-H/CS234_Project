@@ -9,10 +9,11 @@ from pprint import pprint
 
 def get_discounted_return(episode_rewards, gamma):
     discounted_rewards = [0] * (len(episode_rewards) + 1)
-    for i in range(len(episode_rewards)-1,-1,-1):
-        discounted_rewards[i] = discounted_rewards[i+1] * gamma + episode_rewards[i]
+    for i in range(len(episode_rewards) - 1, -1, -1):
+        discounted_rewards[i] = discounted_rewards[i + 1] * gamma + episode_rewards[i]
     return discounted_rewards[:-1]
-    
+
+
 def init_env(env_name, seed):
     env = gym.make(env_name)
     env.reset()
@@ -21,6 +22,7 @@ def init_env(env_name, seed):
     np.random.seed(seed)
     return env
 
+
 def compute_P(transition_probs, num_actions, num_states):
     ret = np.zeros((num_states, num_states))
     for s in transition_probs.keys():
@@ -28,18 +30,19 @@ def compute_P(transition_probs, num_actions, num_states):
             for tup in transition_probs[s][a]:
                 sp = tup[1]
                 p_sasp = tup[0]
-                ret[s,sp] += 1.0/num_actions * p_sasp
+                ret[s, sp] += 1.0 / num_actions * p_sasp
 
     return ret
+
 
 def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
     I = np.eye(len(P), len(P[0]))
     phi_t = phi.transpose()
     V_t = V.transpose()
-    I_gamma_P = I - gamma*P
+    I_gamma_P = I - gamma * P
     print('*****---- P ----*****')
     print(P)
-    inv1 = np.linalg.inv(I - gamma*lstd_lambda*P)
+    inv1 = np.linalg.inv(I - gamma * lstd_lambda * P)
     psi = phi_t @ D @ inv1 @ I_gamma_P
     print('*****---- psi ----*****')
     print(psi)
@@ -71,6 +74,7 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
     print("#### CV Gradient #####")
     print(cv_gradient)
 
+
 done = False
 seed = 1358
 env_name = 'WalkFiveStates-v0'
@@ -87,26 +91,28 @@ transition_probs = env.env.P
 # One hot vector representations:
 Phi = np.eye(num_states)
 
-
 '''
 Computes monte carlo estimates of D and V:
 '''
 print(transition_probs)
 
+
 def run_env_episodes(num_episodes):
     D = np.ones(env.observation_space.n) * 1e-10
     V = np.zeros(env.observation_space.n)
-
+    trajectories = {}
     total_steps = 0
     for ep in range(num_episodes):
+        trajectories[ep] = []
         cur_state = env.reset()
         done = False
         ep_rewards = []
         ep_states = []
         while not done:
             next_state, reward, done, info = env.step(random.randint(0, env.action_space.n - 1))
-            D[cur_state] +=1
-            total_steps +=1
+            trajectories[ep].append((cur_state, reward, next_state, done))
+            D[cur_state] += 1
+            total_steps += 1
             ep_rewards.append(reward)
             ep_states.append(cur_state)
             cur_state = next_state
@@ -114,12 +120,13 @@ def run_env_episodes(num_episodes):
         for i in range(len(ep_states)):
             V[ep_states[i]] += ep_discountedrewards[i]
 
-    print('Monte Carlo D:{0}'.format(D *1.0/ total_steps, total_steps))
-    print('Monte Carlo V:{0}'.format(V *1.0 / D))
-    return np.diag(D / total_steps), V/D
+    print('Monte Carlo D:{0}'.format(D * 1.0 / total_steps, total_steps))
+    print('Monte Carlo V:{0}'.format(V * 1.0 / D))
+    return np.diag(D / total_steps), V / D, trajectories
+
 
 print('Generate Monte Carlo Estimates of D and V...')
-D,V = run_env_episodes(100000)
+D, V, trajectories = run_env_episodes(100000)
 print('Done finding D and V!')
 
 # D = np.diag([0.12443139 ,0.24981192 ,0.25088312, 0.25018808 ,0.12468549])
@@ -134,7 +141,6 @@ print('starting the main loop...')
 
 G = []
 
-
 # LSTD operator:
 LSTD_lambda = LSTD(num_features, epsilon=0.0)
 
@@ -146,51 +152,51 @@ for ep in range(num_episodes):
     next_state, reward, done, info = env.step(np.random.randint(env.action_space.n))
     episode_loss = 0
     timestep = 0
-    
+
     LSTD_lambda.reset_boyan(cur_state)
     cur_state = next_state
-    
+
     while not done:
-        #env.render()
+        # env.render()
 
         next_state, reward, done, info = env.step(np.random.randint(env.action_space.n))
-        LSTD_lambda.update_boyan(Phi[cur_state,:], reward, Phi[next_state,:], gamma, lambda_, timestep)
+        LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], gamma, lambda_, timestep)
         ep_rewards.append(reward)
         ep_states.append(cur_state)
-        #print("A is: {0}".format(LSTD_lambda.A))
-        #print("b is: {0}".format(LSTD_lambda.b))
-        #print("z is: {0}".format(LSTD_lambda.z))
-        #print("Theta is: {0}".format(theta))
-        #print("State is: {0}".format(state))
+        # print("A is: {0}".format(LSTD_lambda.A))
+        # print("b is: {0}".format(LSTD_lambda.b))
+        # print("z is: {0}".format(LSTD_lambda.z))
+        # print("Theta is: {0}".format(theta))
+        # print("State is: {0}".format(state))
         cur_state = next_state
         timestep += 1
 
     theta = LSTD_lambda.theta
     ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
-    #print('ep_discounted:{0}'.format(ep_discountedrewards))
+    # print('ep_discounted:{0}'.format(ep_discountedrewards))
     if len(ep_discountedrewards) > 0:
-        ep_loss = np.mean([(np.dot(Phi[ep_states[t],:], theta) - ep_discountedrewards[t])**2 for t in range(len(ep_states))])
-        #print('Episode {0} loss is {1}'.format(ep, ep_loss))
-        #print('Episode {0} rewards are {1}'.format(ep, ep_rewards))
+        ep_loss = np.mean(
+            [(np.dot(Phi[ep_states[t], :], theta) - ep_discountedrewards[t]) ** 2 for t in range(len(ep_states))])
+        # print('Episode {0} loss is {1}'.format(ep, ep_loss))
+        # print('Episode {0} rewards are {1}'.format(ep, ep_rewards))
         G.append(ep_discountedrewards)
         loss.append(ep_loss)
-    
 
-#print('episode loss:{0}'.format(loss))
+# print('episode loss:{0}'.format(loss))
 print(LSTD_lambda.A, LSTD_lambda.b)
-print ("average loss: ", sum(loss) / num_episodes)
+print("average loss: ", sum(loss) / num_episodes)
 print("#########")
 print("#### Compute CV Gradient #####")
-#nS = 5
-#nF = 3
-#phi = np.random.rand(nS, nF)
-#theta = np.random.rand(nF, 1)
-#P = np.random.rand(nS, nS)
-#V = np.random.rand(nS, 1)
-#D = np.random.rand(nS, nS)
+# nS = 5
+# nF = 3
+# phi = np.random.rand(nS, nF)
+# theta = np.random.rand(nF, 1)
+# P = np.random.rand(nS, nS)
+# V = np.random.rand(nS, 1)
+# D = np.random.rand(nS, nS)
 print(P)
-#print(np.linalg.inv(P + np.ones(len(P), len(P)) * 1e-15))
+# print(np.linalg.inv(P + np.ones(len(P), len(P)) * 1e-15))
 print('---------theta------------')
 print(theta)
-#compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
+# compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
 print("#########")
