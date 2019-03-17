@@ -52,15 +52,15 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
     print('*****----diag(I-H)----*****')
     print(d)
     d_inv1 = np.linalg.inv(d)
-	print('*****----(diag(I-H))^(-1)----*****')
+    print('*****----(diag(I-H))^(-1)----*****')
     print(d_inv1)
     d_inv2 = np.linalg.inv(d_inv1)
     print('*****----(diag(I-H))^(-2)----*****')
     print(d_inv2)
     psi_gradient = gamma * phi_t @ D @ inv1 @ P @ inv1 @ I_gamma_P
     H_gradient = phi @ inv2 @ (psi_gradient - psi_gradient @ phi @ inv2 @ psi)
-	diag_H_gradient = np.diag(np.diag(H_gradient))
-	d_inv2_gradient = d_inv1 @ (diag_H_gradient @ d_inv1 + d_inv1 @ diag_H_gradient) @ d_inv1
+    diag_H_gradient = np.diag(np.diag(H_gradient))
+    d_inv2_gradient = d_inv1 @ (diag_H_gradient @ d_inv1 + d_inv1 @ diag_H_gradient) @ d_inv1
     print('*****---- H_gradient ----*****')
     print(H_gradient)
     H_V = phi @ theta
