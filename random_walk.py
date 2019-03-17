@@ -11,11 +11,11 @@ from pprint import pprint
 done = False
 seed = 1358
 env_name = 'WalkFiveStates-v0'
-num_features = 30
+num_features = 10
 num_states = 5
-num_episodes = 100
+num_episodes = 10000
 
-gamma = 0.8
+gamma = 0.3
 lambda_ = 0.1
 lr = 0.0001
 # One hot vector representations:
@@ -49,7 +49,7 @@ def compute_P(transition_probs, num_actions, num_states):
     return ret
 
 def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
-    # pdb.set_trace()
+    #pdb.set_trace()
     I = np.eye(len(P), len(P[0]))
     phi_t = phi.transpose()
     V_t = V.transpose()
@@ -131,6 +131,8 @@ def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsi
         episode_loss = 0
         cur_state = traj[0][0]
         LSTD_lambda.reset_boyan(Phi[cur_state, :])
+        if len(traj) <= 1 :
+            continue
         for timestep in range(len(traj)):
             cur_state, reward, next_state, done = traj[timestep]
             LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], gamma, lambda_, timestep)
@@ -164,13 +166,17 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, 
         episode_loss = 0
         cur_state = traj[0][0]
         adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
+        if len(traj) <= 1:
+           continue
         for timestep in range(len(traj)):
             cur_state, reward, next_state, done = traj[timestep]
             adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], gamma, lambda_, timestep)
             ep_rewards.append(reward)
             ep_states.append(cur_state)
         theta = adaptive_LSTD_lambda.theta
-        lambda_ -= lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
+        if ep > 1000 :
+            lambda_ -= lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
+            print('current lambda:{0}'.format(lambda_))
         ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
         # print('ep_discounted:{0}'.format(ep_discountedrewards))
         if len(ep_discountedrewards) > 0:
