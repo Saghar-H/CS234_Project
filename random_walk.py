@@ -7,13 +7,21 @@ import copy
 from lstd import LSTD
 from pprint import pprint
 
+################  Parameters #################
+done = False
+seed = 1358
+env_name = 'WalkFiveStates-v0'
+num_features = 30
+num_states = 5
+num_episodes = 100
 
-def get_discounted_return(episode_rewards, gamma):
-    discounted_rewards = [0] * (len(episode_rewards) + 1)
-    for i in range(len(episode_rewards) - 1, -1, -1):
-        discounted_rewards[i] = discounted_rewards[i + 1] * gamma + episode_rewards[i]
-    return discounted_rewards[:-1]
-
+gamma = 0.8
+lambda_ = 0.1
+lr = 0.0001
+# One hot vector representations:
+# Phi = np.eye(num_states)
+Phi = np.random.rand(num_states, num_features)
+##########################################################
 
 def init_env(env_name, seed):
     env = gym.make(env_name)
@@ -22,6 +30,12 @@ def init_env(env_name, seed):
     env.seed(seed)
     np.random.seed(seed)
     return env
+
+def get_discounted_return(episode_rewards, gamma):
+    discounted_rewards = [0] * (len(episode_rewards) + 1)
+    for i in range(len(episode_rewards) - 1, -1, -1):
+        discounted_rewards[i] = discounted_rewards[i + 1] * gamma + episode_rewards[i]
+    return discounted_rewards[:-1]
 
 
 def compute_P(transition_probs, num_actions, num_states):
@@ -32,9 +46,7 @@ def compute_P(transition_probs, num_actions, num_states):
                 sp = tup[1]
                 p_sasp = tup[0]
                 ret[s, sp] += 1.0 / num_actions * p_sasp
-
     return ret
-
 
 def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
     # pdb.set_trace()
@@ -76,29 +88,6 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
     #print("#### CV Gradient #####")
     #print(cv_gradient)
     return cv_gradient
-
-done = False
-seed = 1358
-env_name = 'WalkFiveStates-v0'
-env = init_env(env_name, seed)
-num_features = 30
-num_states = 5
-num_episodes = 100
-
-gamma = 0.8
-lambda_ = 0.1
-lr = 0.0001
-
-transition_probs = env.env.P
-
-# One hot vector representations:
-# Phi = np.eye(num_states)
-Phi = np.random.rand(num_states, num_features)
-'''
-Computes monte carlo estimates of D and V:
-'''
-print("          Transition Probabilities:                 ")
-print(transition_probs)
 
 
 def run_env_episodes(num_episodes):
@@ -220,7 +209,10 @@ def compute_CV_loss(trajectories, num_features, gamma, lambda_, epsilon=0.0):
     cv_loss = np.mean(loto_loss)
     return cv_loss
 
-
+env = init_env(env_name, seed)
+transition_probs = env.env.P
+print("###############Transition Probabilities####################")
+print(transition_probs)
 print('Generate Monte Carlo Estimates of D and V...')
 D, V, trajectories = run_env_episodes(num_episodes)
 print('Done finding D and V!')
