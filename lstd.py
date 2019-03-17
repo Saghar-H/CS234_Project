@@ -41,10 +41,10 @@ class LSTD:
         self.z = np.zeros(self.n)
 
 
-    def reset_boyan(self, state, Phi):
+    def reset_boyan(self, phi):
         """Reset weights, traces, and other parameters."""
         #self.z = np.zeros(self.n)
-        self.z = Phi[state]
+        self.z = phi
 
     @property
     def theta(self):
