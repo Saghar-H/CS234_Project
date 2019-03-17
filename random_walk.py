@@ -156,6 +156,43 @@ def LSTD_algorithm(trajectories, num_features, gamma = 0.4, lambda_ = 0.2, epsil
             loss.append(ep_loss)
     # print('episode loss:{0}'.format(loss))
     #print(LSTD_lambda.A, LSTD_lambda.b)
+
+def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr= 0.001, gamma=0.4, lambda_0=0.2, epsilon=0.0):
+    # LSTD operator:
+    LSTD_lambda = LSTD(num_features, epsilon=0.0)
+    G = []
+    loss = []
+    num_episodes = len(trajectories.keys())
+    for ep in range(num_episodes):
+        traj = trajectories[ep]
+        ep_rewards = []
+        ep_states = []
+        episode_loss = 0
+        cur_state = traj[0][0]
+        LSTD_lambda.reset_boyan(cur_state)
+        for timestep in range(len(traj)):
+            cur_state, reward, next_state, done = traj[timestep]
+            LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], gamma, lambda_, timestep)
+            ep_rewards.append(reward)
+            ep_states.append(cur_state)
+        theta = LSTD_lambda.theta
+        lambda_ = lambda_0 - lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
+        lambda_0 = lambda_
+        ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
+        # print('ep_discounted:{0}'.format(ep_discountedrewards))
+        if len(ep_discountedrewards) > 0:
+            ep_loss = np.mean(
+                [(np.dot(Phi[ep_states[t], :], theta) - ep_discountedrewards[t]) ** 2 for t in
+                 range(len(ep_states))])
+            # print('Episode {0} loss is {1}'.format(ep, ep_loss))
+            # print('Episode {0} rewards are {1}'.format(ep, ep_rewards))
+            G.append(ep_discountedrewards)
+            loss.append(ep_loss)
+    # print('episode loss:{0}'.format(loss))
+    # print(LSTD_lambda.A, LSTD_lambda.b)
+    print("average loss: ", sum(loss) / num_episodes)
+    return LSTD_lambda, theta, loss, G
+
     print("average loss: ", sum(loss) / num_episodes)
     return LSTD_lambda, theta, loss, G
 
