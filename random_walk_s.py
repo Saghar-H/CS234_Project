@@ -37,39 +37,36 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
     phi_t = phi.transpose()
     V_t = V.transpose()
     I_gamma_P = I - gamma*P
-    print(I)
+    print('*****---- P ----*****')
     print(P)
-    print(gamma*lstd_lambda*P)
-    print(I - gamma*lstd_lambda*P)
     inv1 = np.linalg.inv(I - gamma*lstd_lambda*P)
     psi = phi_t @ D @ inv1 @ I_gamma_P
     print('*****---- psi ----*****')
     print(psi)
     inv2 = np.linalg.inv(psi @ phi)
     H = phi @ inv2 @ psi
-    d = np.diag(np.diag(I - H))
+    I_H = I - H
+    d = np.diag(np.diag(I_H))
     print('*****----H----*****')
     print(H)
     print('*****----diag(I-H)----*****')
     print(d)
-    d_inv2 = np.linalg.inv(np.linalg.inv(d))
-    d_inv3 = np.linalg.inv(d_inv2)
+    d_inv1 = np.linalg.inv(d)
+    print('*****----(diag(I-H))^(-1)----*****')
+    print(d_inv1)
+    d_inv2 = np.linalg.inv(d_inv1)
     print('*****----(diag(I-H))^(-2)----*****')
     print(d_inv2)
-    print('*****----(diag(I-H))^(-3)----*****')
-    print(d_inv3)
     psi_gradient = gamma * phi_t @ D @ inv1 @ P @ inv1 @ I_gamma_P
     H_gradient = phi @ inv2 @ (psi_gradient - psi_gradient @ phi @ inv2 @ psi)
     diag_H_gradient = np.diag(np.diag(H_gradient))
+    d_inv2_gradient = d_inv1 @ (diag_H_gradient @ d_inv1 + d_inv1 @ diag_H_gradient) @ d_inv1
+    print('*****---- H_gradient ----*****')
     print(H_gradient)
     H_V = phi @ theta
-    H_gradient_V = H_gradient @ V
-    V_t_H_gradient = V_t @ H_gradient
-    V_t_H = V_t @ H
-    term1 = -V_t @ H_gradient @ d_inv2 @ V + V_t @ H_gradient @ d_inv2 @ H_V
-    term2 = 2 * V_t @ d_inv3 @ diag_H_gradient @ V - 2 * V_t_H @ d_inv3 @ diag_H_gradient @ H_V
-    term2 = term2 - 2 * V_t @ d_inv3 @ diag_H_gradient @ H_V + 2 * V_t_H @ d_inv3 @ H_V
-    term3 = -V_t @ d_inv2 @ H_gradient_V + V_t_H @ d_inv2 @ H_gradient_V
+    term1 = -V_t @ H_gradient @ d_inv2 @ I_H @ V
+    term2 = V_t @ I_H @ d_inv2_gradient @ I_H @ V
+    term3 = -V_t @ I_H @ d_inv2 @ H_gradient @ V
     cv_gradient = term1 + term2 + term3
     print("#### CV Gradient #####")
     print(cv_gradient)
