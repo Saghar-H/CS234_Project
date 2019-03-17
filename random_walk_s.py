@@ -36,6 +36,7 @@ def compute_P(transition_probs, num_actions, num_states):
 
 
 def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
+    #pdb.set_trace()
     I = np.eye(len(P), len(P[0]))
     phi_t = phi.transpose()
     V_t = V.transpose()
@@ -79,17 +80,18 @@ done = False
 seed = 1358
 env_name = 'WalkFiveStates-v0'
 env = init_env(env_name, seed)
-num_features = 5
+num_features = 30
 num_states = 5
 num_episodes = 10000
 
-gamma = 0.4
-lambda_ = 0.2
+gamma = 0.8
+lambda_ = 0.1
 
 transition_probs = env.env.P
 
 # One hot vector representations:
-Phi = np.eye(num_states)
+#Phi = np.eye(num_states)
+Phi = np.random.rand(num_states, num_features)
 
 '''
 Computes monte carlo estimates of D and V:
@@ -152,8 +154,8 @@ for ep in range(num_episodes):
     next_state, reward, done, info = env.step(np.random.randint(env.action_space.n))
     episode_loss = 0
     timestep = 0
-
-    LSTD_lambda.reset_boyan(cur_state)
+    
+    LSTD_lambda.reset_boyan(cur_state, Phi)
     cur_state = next_state
 
     while not done:
@@ -182,9 +184,10 @@ for ep in range(num_episodes):
         G.append(ep_discountedrewards)
         loss.append(ep_loss)
 
-# print('episode loss:{0}'.format(loss))
-print(LSTD_lambda.A, LSTD_lambda.b)
-print("average loss: ", sum(loss) / num_episodes)
+#print('episode loss:{0}'.format(loss))
+#print(LSTD_lambda.A, LSTD_lambda.b)
+print ("average loss: ", sum(loss) / num_episodes)
+
 print("#########")
 print("#### Compute CV Gradient #####")
 # nS = 5
