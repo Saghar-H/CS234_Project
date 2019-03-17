@@ -171,6 +171,7 @@ def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsi
     loss, _ = calculate_batch_loss(trajectories, G, theta)
     # print('episode loss:{0}'.format(loss))
     # print(LSTD_lambda.A, LSTD_lambda.b)
+
     print("average running loss in training: ", sum(running_loss) / num_episodes)
     print("average loss after training: ", sum(loss) / num_episodes)
     return LSTD_lambda, theta, loss, G
@@ -254,6 +255,26 @@ def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, epsilon=0.0)
     cv_loss = np.mean(loto_loss)
     return cv_loss
 
+def find_optimal_lambda(step_size=0.05, num_iterations=10):
+    ave_optimal_lambda = 0
+    ave_optimal_loss = 0
+    for i in range(0, num_iterations):
+        lambda_ = 0.0
+        optimal_lambda = 0
+        LSTD_lambda, theta, optimal_loss, G = LSTD_algorithm(trajectories, Phi, num_features, gamma, lambda_)
+        while lambda_ < 1:
+            LSTD_lambda, theta, loss, G = LSTD_algorithm(trajectories, Phi, num_features, gamma, lambda_)
+            if loss < optimal_loss:
+                optimal_loss = loss
+                optimal_lambda = lambda_
+            lambda_ += step_size
+        ave_optimal_loss += optimal_loss
+        ave_optimal_lambda += optimal_lambda
+        print(optimal_lambda)
+    ave_optimal_lambda /= num_iterations
+    ave_optimal_loss /= num_iterations
+    return ave_optimal_loss, ave_optimal_lambda
+
 env = init_env(env_name, seed)
 transition_probs = env.env.P
 print("###############Transition Probabilities####################")
@@ -289,10 +310,15 @@ print(P)
 print('---------theta------------')
 print("Theta: {0}".format(theta))
 # compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
-#cv_loss = compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_ )
-#print("########## Compute CV Loss ###########")
-#print("CV Loss: {0}".format(cv_loss))
+# cv_loss = compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_ )
+# print("########## Compute CV Loss ###########")
+# print("CV Loss: {0}".format(cv_loss))
 print('Running the Adaptive LSTD Lambda Algorithm ...')
 adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G = Adaptive_LSTD_algorithm(trajectories, num_features,
                                                                                           Phi, P, V, D, lr,
                                                                                           gamma, lambda_)
+print('Finding optimal lambda')
+optimal_loss, optimal_lambda = find_optimal_lambda()
+#print(optimal_loss)
+print(optimal_lambda)
+
