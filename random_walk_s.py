@@ -198,5 +198,5 @@ print(P)
 # print(np.linalg.inv(P + np.ones(len(P), len(P)) * 1e-15))
 print('---------theta------------')
 print(theta)
-# compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
-print("#########")
+compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
+
