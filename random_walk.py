@@ -4,6 +4,7 @@ import pdb
 import numpy as np
 import random
 import copy
+import matplotlib.pyplot as plt
 from lstd import LSTD
 from pprint import pprint
 from adam import ADAM
@@ -274,7 +275,8 @@ def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, logger =
     cv_loss = np.mean(loto_loss)
     return cv_loss
 
-def find_optimal_lambda(step_size_lambda=0.01, step_size_gamma=0.1):
+
+def find_optimal_lambda(step_size_lambda=0.05, step_size_gamma=0.1):
     gamma_lambda_loss = []
     gamma = 0.0
     while gamma < 1:
@@ -286,9 +288,32 @@ def find_optimal_lambda(step_size_lambda=0.01, step_size_gamma=0.1):
                 optimal_loss = loss
                 optimal_lambda = lambda_
             lambda_ += step_size_lambda
-        gamma += step_size_gamma
         gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])
-    return gamma_lambda_loss
+        gamma += step_size_gamma
+    return np.array(gamma_lambda_loss)
+
+
+def draw_optimal_lambda_heatmap(gamma, lambda_, loss):
+    plt.plot(gamma, lambda_, 'ro')
+    plt.title('Optimal lambda for each gamma using greedy search')
+    plt.ylabel('Optimal lambda')
+    plt.xlabel('Gamma')
+    plt.grid()
+    plt.show()
+    #size = len(gamma)
+    #heatmap, xedges, yedges = np.histogram2d(gamma, lambda_, bins=size, weights=loss)
+    #extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+    #plt.clf()
+    #plt.title('Heatmap for average loss using LSTD Algorithm')
+    #plt.ylabel('optimal lambda')
+    #plt.xlabel('gamma')
+    #plt.imshow(heatmap, extent=extent)
+    #plt.show()
+    #XB = np.linspace(-1,1,size)
+    #YB = np.linspace(-1,1,size)
+    #X,Y = np.meshgrid(gamma,lambda_)
+    #plt.imshow(loss,interpolation='none')
+
 
 env = init_env(env_name, seed)
 
@@ -328,9 +353,8 @@ print('Running the Adaptive LSTD Lambda Algorithm ...')
 adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G = Adaptive_LSTD_algorithm(trajectories, num_features,
                                                                                           Phi, P, V, D, lr,
                                                                                           gamma, lambda_)
-#print('Finding optimal lambda using LSTD Lambda Algorithm')
-#result = find_optimal_lambda()
-#print(result)
-#print("optimal loss: ", optimal_loss)
-#print("optimal lambda: ", optimal_lambda)
 
+print('Finding optimal lambda using LSTD Lambda Algorithm')
+result = find_optimal_lambda()
+print(result)
+draw_optimal_lambda_heatmap(gamma=result[:,0], lambda_=result[:,1], loss=result[:,2])
