@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from lstd import LSTD
 from pprint import pprint
 from adam import ADAM
-
+from tensorboard_utils import Logger
 ################  Parameters #################
 done = False
 seed = 1358
@@ -20,6 +20,7 @@ num_episodes = 10000
 gamma = 0.8
 lambda_ = 0.0
 lr = 0.0001
+log_events = True
 # One hot vector representations:
 # Phi = np.eye(num_states)
 ##########################################################
@@ -113,6 +114,7 @@ def run_env_episodes(num_episodes):
     D = np.ones(env.observation_space.n) * 1e-10
     V = np.zeros(env.observation_space.n)
     trajectories = {}
+    Gs = {}
     total_steps = 0
     for ep in range(num_episodes):
         trajectories[ep] = []
@@ -120,6 +122,7 @@ def run_env_episodes(num_episodes):
         done = False
         ep_rewards = []
         ep_states = []
+        
         while not done:
             next_state, reward, done, info = env.step(random.randint(0, env.action_space.n - 1))
             trajectories[ep].append((cur_state, reward, next_state, done))
@@ -128,13 +131,16 @@ def run_env_episodes(num_episodes):
             ep_rewards.append(reward)
             ep_states.append(cur_state)
             cur_state = next_state
+        
         ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
+        Gs[ep] = ep_discountedrewards
+
         for i in range(len(ep_states)):
             V[ep_states[i]] += ep_discountedrewards[i]
 
     print('Monte Carlo D:{0}'.format(D * 1.0 / total_steps, total_steps))
     print('Monte Carlo V:{0}'.format(V * 1.0 / D))
-    return np.diag(D / total_steps), V / D, trajectories
+    return np.diag(D / total_steps), V / D, trajectories, Gs
 
 
 def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsilon=0.0):
@@ -166,7 +172,7 @@ def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsi
                 [(np.dot(Phi[ep_states[t], :], theta) - ep_discountedrewards[t]) ** 2 for t in range(len(ep_states))])
             # print('Episode {0} loss is {1}'.format(ep, ep_loss))
             # print('Episode {0} rewards are {1}'.format(ep, ep_rewards))
-            G[ep] =ep_discountedrewards
+            G[ep] = ep_discountedrewards
             running_loss.append(ep_loss)
     # After we calculated the Theta parameter from the training data
     loss, _ = calculate_batch_loss(trajectories, G, theta)
@@ -234,7 +240,7 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, 
     return adaptive_LSTD_lambda, theta, loss, G
 
 
-def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, epsilon=0.0):
+def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, logger = None, epsilon=0.0):
     '''
     :param trajectories:
     :param num_features:
@@ -245,15 +251,27 @@ def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, epsilon=0.0)
     total_num_tuples = sum([len(traj) for traj in trajectories.values()])
     num_episodes = len(trajectories.keys())
     loto_loss = []
+    step = 0
     for i in range(num_episodes):
-        print("calculating LOTO Loss for {0} trajectory".format(i))
         traj = trajectories[i]
+        if len(traj) <= 4: 
+            continue
         for j in range(len(traj)):
             # leave one tuple oto_trajectoriesout
             loto_trajectories = copy.deepcopy(trajectories)
             del loto_trajectories[i][j]
-            _, _, loss, _ = LSTD_algorithm(loto_trajectories,Phi, num_features, gamma, lambda_)
-            loto_loss.append(loss)
+            model, _, loss, _ = LSTD_algorithm(loto_trajectories,Phi, num_features, gamma, lambda_)        
+        
+            theta = model.theta
+            #pdb.set_trace()
+            tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2
+            loto_loss.append(tuple_loss)
+        if logger:
+            logger.log_scalar('average trajectories loss', loss, step)
+            logger.log_scalar('current tuple loto cv', tuple_loss, step)
+            logger.log_scalar('mean loto cv', np.mean(loto_loss), step)
+            step += 1
+        print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)))
     cv_loss = np.mean(loto_loss)
     return cv_loss
 
@@ -298,11 +316,15 @@ def draw_optimal_lambda_heatmap(gamma, lambda_, loss):
 
 
 env = init_env(env_name, seed)
+
+logger = None
+if log_events:
+    logger = Logger('/Users/siamak/temp/logs/test')
 transition_probs = env.env.P
 print("###############Transition Probabilities####################")
 print(transition_probs)
 print('Generate Monte Carlo Estimates of D and V...')
-D, V, trajectories = run_env_episodes(num_episodes)
+D, V, trajectories, Gs = run_env_episodes(num_episodes)
 print('Done finding D and V!')
 Phi = np.random.rand(num_states, num_features)
 # D = np.diag([0.12443139 ,0.24981192 ,0.25088312, 0.25018808 ,0.12468549])
@@ -311,6 +333,7 @@ Phi = np.random.rand(num_states, num_features)
 '''
 Now compute the MRP value of P: P(s'|s)
 '''
+
 P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 
 # Run LSTD_lambda algorithm:
@@ -321,15 +344,17 @@ print('---------theta------------')
 print("Theta: {0}".format(theta))
 # print("#### Compute CV Gradient #####")
 # compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
-# cv_loss = compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_ )
-# print("########## Compute CV Loss ###########")
-# print("CV Loss: {0}".format(cv_loss))
+cv_loss = compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, logger)
+#print("########## Compute CV Loss ###########")
+#print("CV Loss: {0}".format(cv_loss))
+
+
 print('Running the Adaptive LSTD Lambda Algorithm ...')
 adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G = Adaptive_LSTD_algorithm(trajectories, num_features,
                                                                                           Phi, P, V, D, lr,
                                                                                           gamma, lambda_)
+
 print('Finding optimal lambda using LSTD Lambda Algorithm')
 result = find_optimal_lambda()
 print(result)
 draw_optimal_lambda_heatmap(gamma=result[:,0], lambda_=result[:,1], loss=result[:,2])
-
