@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from lstd import LSTD
 from pprint import pprint
 from adam import ADAM
-from tensorboard_utils import Logger
 
 ################  Parameters #################
 done = False
@@ -21,11 +20,11 @@ num_episodes = 10000
 gamma = 0.8
 default_lambda = 0.0
 lr = 0.0001
-log_events = True
+log_events = False
 
-
-# One hot vector representations:
-# Phi = np.eye(num_states)
+if log_events:
+    from tensorboard_utils import Logger
+   
 ##########################################################
 
 def init_env(env_name, seed):
@@ -188,7 +187,7 @@ def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsi
 
     # print("average running loss in training: ", sum(running_loss) / num_episodes)
     # print("average loss after training: ", sum(loss) / num_episodes)
-    average_loss = sum(loss) / num_episodes
+    average_loss = np.mean(loss)
     return LSTD_lambda, theta, average_loss, G
 
 
@@ -243,8 +242,8 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, 
     # print('episode loss:{0}'.format(loss))
     # print(LSTD_lambda.A, LSTD_lambda.b)
     print("Final Lambda: {0}".format(lambda_))
-    print("average running loss in training: ", sum(running_loss) / num_episodes)
-    print("average loss after training: ", sum(loss) / num_episodes)
+    print("average running loss in training: ", np.mean(running_loss))
+    print("average loss after training: ", np.mean(loss))
     return adaptive_LSTD_lambda, theta, loss, G, lambda_
 
 
