@@ -4,10 +4,12 @@ import pdb
 import numpy as np
 import random
 import copy
+import matplotlib.pyplot as plt
 from lstd import LSTD
 from pprint import pprint
 from adam import ADAM
 from tensorboard_utils import Logger
+
 ################  Parameters #################
 done = False
 seed = 1358
@@ -17,9 +19,11 @@ num_states = 5
 num_episodes = 10000
 
 gamma = 0.8
-lambda_ = 0.2
+default_lambda = 0.0
 lr = 0.0001
 log_events = True
+
+
 # One hot vector representations:
 # Phi = np.eye(num_states)
 ##########################################################
@@ -31,6 +35,8 @@ def init_env(env_name, seed):
     env.seed(seed)
     np.random.seed(seed)
     return env
+
+
 def calculate_batch_loss(trajectories, G, theta):
     '''
     :param theta: Value function parameter such that V= Phi * Theta
@@ -42,13 +48,14 @@ def calculate_batch_loss(trajectories, G, theta):
     loss = []
     for ep in range(num_episodes):
         traj = trajectories[ep]
-        if len(traj) <= 4 and len(G[ep]) <= 0:
-           continue
+        if len(traj) <= 4 or len(G[ep]) <= 0:
+            continue
         ep_loss = np.mean(
             [(np.dot(Phi[traj[t][0], :], theta) - G[ep][t]) ** 2 for t in range(len(traj))])
         loss.append(ep_loss)
     avg_loss = np.mean(loss)
     return loss, avg_loss
+
 
 def get_discounted_return(episode_rewards, gamma):
     discounted_rewards = [0] * (len(episode_rewards) + 1)
@@ -67,45 +74,46 @@ def compute_P(transition_probs, num_actions, num_states):
                 ret[s, sp] += 1.0 / num_actions * p_sasp
     return ret
 
+
 def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
-    #pdb.set_trace()
+    # pdb.set_trace()
     I = np.eye(len(P), len(P[0]))
     phi_t = phi.transpose()
     V_t = V.transpose()
     I_gamma_P = I - gamma * P
-    #print('*****---- P ----*****')
-    #print(P)
+    # print('*****---- P ----*****')
+    # print(P)
     inv1 = np.linalg.pinv(I - gamma * lstd_lambda * P)
     psi = phi_t @ D @ inv1 @ I_gamma_P
-    #print('*****---- psi ----*****')
-    #print(psi)
+    # print('*****---- psi ----*****')
+    # print(psi)
     inv2 = np.linalg.pinv(psi @ phi)
     H = phi @ inv2 @ psi
     I_H = I - H
     d = np.diag(np.diag(I_H))
-    #print('*****----H----*****')
-    #print(H)
-    #print('*****----diag(I-H)----*****')
-    #print(d)
+    # print('*****----H----*****')
+    # print(H)
+    # print('*****----diag(I-H)----*****')
+    # print(d)
     d_inv1 = np.linalg.pinv(d)
-    #print('*****----(diag(I-H))^(-1)----*****')
-    #print(d_inv1)
+    # print('*****----(diag(I-H))^(-1)----*****')
+    # print(d_inv1)
     d_inv2 = np.linalg.pinv(d_inv1)
-    #print('*****----(diag(I-H))^(-2)----*****')
-    #print(d_inv2)
+    # print('*****----(diag(I-H))^(-2)----*****')
+    # print(d_inv2)
     psi_gradient = gamma * phi_t @ D @ inv1 @ P @ inv1 @ I_gamma_P
     H_gradient = phi @ inv2 @ (psi_gradient - psi_gradient @ phi @ inv2 @ psi)
     diag_H_gradient = np.diag(np.diag(H_gradient))
     d_inv2_gradient = d_inv1 @ (diag_H_gradient @ d_inv1 + d_inv1 @ diag_H_gradient) @ d_inv1
-    #print('*****---- H_gradient ----*****')
-    #print(H_gradient)
+    # print('*****---- H_gradient ----*****')
+    # print(H_gradient)
     H_V = phi @ theta
     term1 = -V_t @ H_gradient @ d_inv2 @ I_H @ V
     term2 = V_t @ I_H @ d_inv2_gradient @ I_H @ V
     term3 = -V_t @ I_H @ d_inv2 @ H_gradient @ V
     cv_gradient = term1 + term2 + term3
-    #print("#### CV Gradient #####")
-    #print(cv_gradient)
+    # print("#### CV Gradient #####")
+    # print(cv_gradient)
     return cv_gradient
 
 
@@ -121,7 +129,7 @@ def run_env_episodes(num_episodes):
         done = False
         ep_rewards = []
         ep_states = []
-        
+
         while not done:
             next_state, reward, done, info = env.step(random.randint(0, env.action_space.n - 1))
             trajectories[ep].append((cur_state, reward, next_state, done))
@@ -130,7 +138,7 @@ def run_env_episodes(num_episodes):
             ep_rewards.append(reward)
             ep_states.append(cur_state)
             cur_state = next_state
-        
+
         ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
         Gs[ep] = ep_discountedrewards
 
@@ -153,7 +161,7 @@ def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsi
         G[ep] = []
         traj = trajectories[ep]
         if len(traj) <= 4:
-           continue
+            continue
         ep_rewards = []
         ep_states = []
         cur_state = traj[0][0]
@@ -178,10 +186,11 @@ def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsi
     # print('episode loss:{0}'.format(loss))
     # print(LSTD_lambda.A, LSTD_lambda.b)
 
-    #print("average running loss in training: ", sum(running_loss) / num_episodes)
-    #print("average loss after training: ", sum(loss) / num_episodes)
+    # print("average running loss in training: ", sum(running_loss) / num_episodes)
+    # print("average loss after training: ", sum(loss) / num_episodes)
     average_loss = sum(loss) / num_episodes
     return LSTD_lambda, theta, average_loss, G
+
 
 def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, gamma=0.4, lambda_=0.2, epsilon=0.0):
     # LSTD operator:
@@ -195,7 +204,7 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, 
         G[ep] = []
         traj = trajectories[ep]
         if len(traj) <= 4:
-           continue
+            continue
         ep_rewards = []
         ep_states = []
         episode_loss = 0
@@ -207,19 +216,19 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, 
             ep_rewards.append(reward)
             ep_states.append(cur_state)
         theta = adaptive_LSTD_lambda.theta
-        #if ep > 1000 :
-            #new_lambda = lambda_ -  lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
-            #print(new_lambda)
-            #if new_lambda >= 0 and new_lambda <= 1:
-            #   lambda_ = new_lambda
-            #   print('current lambda:{0}'.format(lambda_))
-        grad = compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)        
-        #adam_optimizer.update(grad, ep)
-        #new_lambda = adam_optimizer.theta
-        new_lambda = lambda_ -  lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
+        # if ep > 1000 :
+        # new_lambda = lambda_ -  lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
+        # print(new_lambda)
+        # if new_lambda >= 0 and new_lambda <= 1:
+        #   lambda_ = new_lambda
+        #   print('current lambda:{0}'.format(lambda_))
+        grad = compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
+        # adam_optimizer.update(grad, ep)
+        # new_lambda = adam_optimizer.theta
+        new_lambda = lambda_ - lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
         if new_lambda >= 0 and new_lambda <= 1:
             lambda_ = new_lambda
-            #print('current lambda:{0}'.format(lambda_))
+            # print('current lambda:{0}'.format(lambda_))
         ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
         # print('ep_discounted:{0}'.format(ep_discountedrewards))
         if len(ep_discountedrewards) > 0:
@@ -236,10 +245,11 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, 
     print("Final Lambda: {0}".format(lambda_))
     print("average running loss in training: ", sum(running_loss) / num_episodes)
     print("average loss after training: ", sum(loss) / num_episodes)
-    return adaptive_LSTD_lambda, theta, loss, G
+    return adaptive_LSTD_lambda, theta, loss, G, lambda_
 
 
-def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, logger = None, epsilon=0.0):
+def compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger=False,
+                    epsilon=0.0):
     '''
     :param trajectories:
     :param num_features:
@@ -253,16 +263,15 @@ def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, logger =
     step = 0
     for i in range(num_episodes):
         traj = trajectories[i]
-        if len(traj) <= 4: 
+        if len(traj) <= 4:
             continue
         for j in range(len(traj)):
             # leave one tuple oto_trajectoriesout
             loto_trajectories = copy.deepcopy(trajectories)
             del loto_trajectories[i][j]
-            model, _, loss, _ = LSTD_algorithm(loto_trajectories,Phi, num_features, gamma, lambda_)        
-        
+            model, _, loss, _ = LSTD_algorithm(loto_trajectories, Phi, num_features, gamma, lambda_)
             theta = model.theta
-            #pdb.set_trace()
+            # pdb.set_trace()
             tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2
             loto_loss.append(tuple_loss)
             
@@ -274,30 +283,58 @@ def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, logger =
                 step += 1
 
         print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)))
+
     cv_loss = np.mean(loto_loss)
     return cv_loss
 
-def find_optimal_lambda(step_size_lambda=0.01, step_size_gamma=0.1):
+
+def find_optimal_lambda(step_size_lambda=0.05, step_size_gamma=0.1):
+
     gamma_lambda_loss = []
     gamma = 0.0
     while gamma < 1:
         lambda_ = 0.0
         optimal_loss = np.inf
         while lambda_ < 1:
-            _, _, loss, _ = LSTD_algorithm(trajectories, Phi, num_features, gamma, lambda_)
+            # _, _, loss, _ = LSTD_algorithm(trajectories, Phi, num_features, gamma, lambda_)
+            loss = compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger=False)
             if loss < optimal_loss:
                 optimal_loss = loss
                 optimal_lambda = lambda_
             lambda_ += step_size_lambda
-        gamma += step_size_gamma
         gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])
-    return gamma_lambda_loss
+        gamma += step_size_gamma
+    return np.array(gamma_lambda_loss)
+
+
+def draw_optimal_lambda_heatmap(gamma, lambda_, loss):
+    plt.plot(gamma, lambda_, 'ro')
+    plt.title('Optimal lambda for each gamma using greedy search')
+    plt.ylabel('Optimal lambda')
+    plt.xlabel('Gamma')
+    plt.grid()
+    plt.show()
+    #size = len(gamma)
+    #heatmap, xedges, yedges = np.histogram2d(gamma, lambda_, bins=size, weights=loss)
+    #extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+    #plt.clf()
+    #plt.title('Heatmap for average loss using LSTD Algorithm')
+    #plt.ylabel('optimal lambda')
+    #plt.xlabel('gamma')
+    #plt.imshow(heatmap, extent=extent)
+    #plt.show()
+    #XB = np.linspace(-1,1,size)
+    #YB = np.linspace(-1,1,size)
+    #X,Y = np.meshgrid(gamma,lambda_)
+    #plt.imshow(loss,interpolation='none')
+
+
 
 env = init_env(env_name, seed)
 
 logger = None
 if log_events:
-    logger = Logger('/Users/siamak/temp/logs/test', 'lamb_02_gamma_08')
+    logger = Logger('/Users/siamak/temp/logs/test', 'adaptive_lambda_008_gamma_08')
 transition_probs = env.env.P
 print("###############Transition Probabilities####################")
 print(transition_probs)
@@ -312,32 +349,31 @@ Phi = np.random.rand(num_states, num_features)
 Now compute the MRP value of P: P(s'|s)
 '''
 
-logger.log_scalar('test',0.0008,0)
-logger.log_scalar('test',0.21,1)
-logger.log_scalar('test',0.011,2)
 
 P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 
 # Run LSTD_lambda algorithm:
-print('Running the LSTD Lambda Algorithm ...')
-print("Current Lambda: {0}".format(lambda_))
-LSTD_lambda, theta, loss, G = LSTD_algorithm(trajectories, Phi, num_features, gamma, lambda_)
-print('---------theta------------')
-print("Theta: {0}".format(theta))
+# print('Running the LSTD Lambda Algorithm ...')
+# print("Current Lambda: {0}".format(lambda_))
+# LSTD_lambda, theta, loss, G = LSTD_algorithm(trajectories, Phi, num_features, gamma, lambda_)
+# print('---------theta------------')
+# print("Theta: {0}".format(theta))
+
 # print("#### Compute CV Gradient #####")
 # compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
-cv_loss = compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, logger)
-#print("########## Compute CV Loss ###########")
-#print("CV Loss: {0}".format(cv_loss))
+# cv_loss = compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, logger)
+# print("########## Compute CV Loss ###########")
+# print("CV Loss: {0}".format(cv_loss))
 
 
 print('Running the Adaptive LSTD Lambda Algorithm ...')
-adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G = Adaptive_LSTD_algorithm(trajectories, num_features,
+adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
                                                                                           Phi, P, V, D, lr,
-                                                                                          gamma, lambda_)
-#print('Finding optimal lambda using LSTD Lambda Algorithm')
-#result = find_optimal_lambda()
-#print(result)
-#print("optimal loss: ", optimal_loss)
-#print("optimal lambda: ", optimal_lambda)
+                                                                                          gamma, default_lambda)
 
+cv_loss = compute_CV_loss(trajectories, Phi, num_features, gamma, adaptive_lambda_val, Gs, logger)
+
+print('Finding optimal lambda using LSTD Lambda Algorithm')
+result = find_optimal_lambda()
+print(result)
+draw_optimal_lambda_heatmap(gamma=result[:,0], lambda_=result[:,1], loss=result[:,2])
