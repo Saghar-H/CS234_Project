@@ -17,7 +17,7 @@ num_states = 5
 num_episodes = 10000
 
 gamma = 0.8
-lambda_ = 0.0
+lambda_ = 0.2
 lr = 0.0001
 log_events = True
 # One hot vector representations:
@@ -265,11 +265,14 @@ def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, logger =
             #pdb.set_trace()
             tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2
             loto_loss.append(tuple_loss)
-        if logger:
-            logger.log_scalar('average trajectories loss', loss, step)
-            logger.log_scalar('current tuple loto cv', tuple_loss, step)
-            logger.log_scalar('mean loto cv', np.mean(loto_loss), step)
-            step += 1
+            
+            if logger:
+                logger.log_scalar('average trajectories loss', loss, step)
+                logger.log_scalar('current tuple loto cv', tuple_loss, step)
+                logger.log_scalar('mean loto cv', np.mean(loto_loss), step)
+                logger.writer.flush()
+                step += 1
+
         print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)))
     cv_loss = np.mean(loto_loss)
     return cv_loss
@@ -294,7 +297,7 @@ env = init_env(env_name, seed)
 
 logger = None
 if log_events:
-    logger = Logger('/Users/siamak/temp/logs/test')
+    logger = Logger('/Users/siamak/temp/logs/test', 'lamb_02_gamma_08')
 transition_probs = env.env.P
 print("###############Transition Probabilities####################")
 print(transition_probs)
@@ -308,6 +311,10 @@ Phi = np.random.rand(num_states, num_features)
 '''
 Now compute the MRP value of P: P(s'|s)
 '''
+
+logger.log_scalar('test',0.0008,0)
+logger.log_scalar('test',0.21,1)
+logger.log_scalar('test',0.011,2)
 
 P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 
