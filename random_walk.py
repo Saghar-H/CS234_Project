@@ -7,7 +7,7 @@ import copy
 from lstd import LSTD
 from pprint import pprint
 from adam import ADAM
-
+from tensorboard_utils import Logger
 ################  Parameters #################
 done = False
 seed = 1358
@@ -19,6 +19,7 @@ num_episodes = 10000
 gamma = 0.8
 lambda_ = 0.0
 lr = 0.0001
+log_events = True
 # One hot vector representations:
 # Phi = np.eye(num_states)
 ##########################################################
@@ -179,7 +180,7 @@ def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsi
 
     #print("average running loss in training: ", sum(running_loss) / num_episodes)
     #print("average loss after training: ", sum(loss) / num_episodes)
-
+    average_loss = sum(loss) / num_episodes
     return LSTD_lambda, theta, average_loss, G
 
 def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, gamma=0.4, lambda_=0.2, epsilon=0.0):
@@ -238,7 +239,7 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, 
     return adaptive_LSTD_lambda, theta, loss, G
 
 
-def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, epsilon=0.0):
+def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, logger = None, epsilon=0.0):
     '''
     :param trajectories:
     :param num_features:
@@ -249,6 +250,7 @@ def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, epsilon=
     total_num_tuples = sum([len(traj) for traj in trajectories.values()])
     num_episodes = len(trajectories.keys())
     loto_loss = []
+    step = 0
     for i in range(num_episodes):
         traj = trajectories[i]
         if len(traj) <= 4: 
@@ -261,7 +263,13 @@ def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, epsilon=
         
             theta = model.theta
             #pdb.set_trace()
-            loto_loss.append((np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2)
+            tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2
+            loto_loss.append(tuple_loss)
+        if logger:
+            logger.log_scalar('average trajectories loss', loss, step)
+            logger.log_scalar('current tuple loto cv', tuple_loss, step)
+            logger.log_scalar('mean loto cv', np.mean(loto_loss), step)
+            step += 1
         print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)))
     cv_loss = np.mean(loto_loss)
     return cv_loss
@@ -283,6 +291,10 @@ def find_optimal_lambda(step_size_lambda=0.01, step_size_gamma=0.1):
     return gamma_lambda_loss
 
 env = init_env(env_name, seed)
+
+logger = None
+if log_events:
+    logger = Logger('/Users/siamak/temp/logs/test')
 transition_probs = env.env.P
 print("###############Transition Probabilities####################")
 print(transition_probs)
@@ -296,6 +308,7 @@ Phi = np.random.rand(num_states, num_features)
 '''
 Now compute the MRP value of P: P(s'|s)
 '''
+
 P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 
 # Run LSTD_lambda algorithm:
@@ -306,18 +319,18 @@ print('---------theta------------')
 print("Theta: {0}".format(theta))
 # print("#### Compute CV Gradient #####")
 # compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
-cv_loss = compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs)
-print("########## Compute CV Loss ###########")
-print("CV Loss: {0}".format(cv_loss))
+cv_loss = compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, Gs, logger)
+#print("########## Compute CV Loss ###########")
+#print("CV Loss: {0}".format(cv_loss))
 
 
 print('Running the Adaptive LSTD Lambda Algorithm ...')
 adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G = Adaptive_LSTD_algorithm(trajectories, num_features,
                                                                                           Phi, P, V, D, lr,
                                                                                           gamma, lambda_)
-print('Finding optimal lambda using LSTD Lambda Algorithm')
-result = find_optimal_lambda()
-print(result)
+#print('Finding optimal lambda using LSTD Lambda Algorithm')
+#result = find_optimal_lambda()
+#print(result)
 #print("optimal loss: ", optimal_loss)
 #print("optimal lambda: ", optimal_lambda)
 
