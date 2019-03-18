@@ -80,12 +80,12 @@ done = False
 seed = 1358
 env_name = 'WalkFiveStates-v0'
 env = init_env(env_name, seed)
-num_features = 30
+num_features = 10
 num_states = 5
-num_episodes = 10000
+num_episodes = 100
 
-gamma = 0.8
-lambda_ = 0.1
+gamma = 0.3
+lambda_ =  0.9
 
 transition_probs = env.env.P
 
@@ -111,7 +111,7 @@ def run_env_episodes(num_episodes):
         ep_rewards = []
         ep_states = []
         while not done:
-            next_state, reward, done, info = env.step(random.randint(0, env.action_space.n - 1))
+            next_state, reward, done, info = env.step(random.randint(0, env.action_space.n-1))
             trajectories[ep].append((cur_state, reward, next_state, done))
             D[cur_state] += 1
             total_steps += 1
@@ -128,8 +128,9 @@ def run_env_episodes(num_episodes):
 
 
 print('Generate Monte Carlo Estimates of D and V...')
-D, V, trajectories = run_env_episodes(100000)
+D, V, trajectories = run_env_episodes(100)
 print('Done finding D and V!')
+
 
 # D = np.diag([0.12443139 ,0.24981192 ,0.25088312, 0.25018808 ,0.12468549])
 # V = np.array([0, 0.01776151, 0.071083, 0.26708894 ,1])
@@ -144,6 +145,7 @@ print('starting the main loop...')
 G = []
 
 # LSTD operator:
+env = init_env(env_name, seed)
 LSTD_lambda = LSTD(num_features, epsilon=0.0)
 
 loss = []
@@ -151,17 +153,17 @@ for ep in range(num_episodes):
     cur_state = env.reset()
     ep_rewards = []
     ep_states = []
-    next_state, reward, done, info = env.step(np.random.randint(env.action_space.n))
+    next_state, reward, done, info = env.step(random.randint(0,env.action_space.n-1))
     episode_loss = 0
     timestep = 0
+    print(cur_state, next_state, reward, done)
     
-    LSTD_lambda.reset_boyan(cur_state, Phi)
-    cur_state = next_state
-
+    LSTD_lambda.reset_boyan(Phi[cur_state])
+    cur_state = next_state    
     while not done:
         # env.render()
-
-        next_state, reward, done, info = env.step(np.random.randint(env.action_space.n))
+        next_state, reward, done, info = env.step(random.randint(0,env.action_space.n-1))
+        print(cur_state, next_state, reward, done)
         LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], gamma, lambda_, timestep)
         ep_rewards.append(reward)
         ep_states.append(cur_state)
@@ -183,6 +185,7 @@ for ep in range(num_episodes):
         # print('Episode {0} rewards are {1}'.format(ep, ep_rewards))
         G.append(ep_discountedrewards)
         loss.append(ep_loss)
+        #print(ep_loss, ep_states, ep_discountedrewards, np.dot(Phi[ep_states[0], :], theta))
 
 #print('episode loss:{0}'.format(loss))
 #print(LSTD_lambda.A, LSTD_lambda.b)
@@ -201,5 +204,5 @@ print(P)
 # print(np.linalg.inv(P + np.ones(len(P), len(P)) * 1e-15))
 print('---------theta------------')
 print(theta)
-compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
+#compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
 
