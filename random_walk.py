@@ -68,7 +68,6 @@ def compute_P(transition_probs, num_actions, num_states):
     return ret
 
 def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
-    #pdb.set_trace()
     I = np.eye(len(P), len(P[0]))
     phi_t = phi.transpose()
     V_t = V.transpose()
@@ -258,7 +257,7 @@ def compute_CV_loss(trajectories,Phi, num_features, gamma, lambda_, epsilon=0.0)
     return cv_loss
 
 
-def find_optimal_lambda(step_size_lambda=0.05, step_size_gamma=0.1):
+def find_optimal_lambda_greedy(Phi, step_size_lambda=0.05, step_size_gamma=0.1):
     gamma_lambda_loss = []
     gamma = 0.0
     while gamma < 1:
@@ -275,26 +274,48 @@ def find_optimal_lambda(step_size_lambda=0.05, step_size_gamma=0.1):
     return np.array(gamma_lambda_loss)
 
 
-def draw_optimal_lambda_heatmap(gamma, lambda_, loss):
+def draw_optimal_lambda_greedy(gamma, lambda_):
     plt.plot(gamma, lambda_, 'ro')
     plt.title('Optimal lambda for each gamma using greedy search')
     plt.ylabel('Optimal lambda')
     plt.xlabel('Gamma')
     plt.grid()
     plt.show()
-    #size = len(gamma)
-    #heatmap, xedges, yedges = np.histogram2d(gamma, lambda_, bins=size, weights=loss)
-    #extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-    #plt.clf()
-    #plt.title('Heatmap for average loss using LSTD Algorithm')
-    #plt.ylabel('optimal lambda')
-    #plt.xlabel('gamma')
-    #plt.imshow(heatmap, extent=extent)
-    #plt.show()
-    #XB = np.linspace(-1,1,size)
-    #YB = np.linspace(-1,1,size)
-    #X,Y = np.meshgrid(gamma,lambda_)
-    #plt.imshow(loss,interpolation='none')
+
+def set_seed(seed):
+    random.seed(seed)
+    env.seed(seed)
+    np.random.seed(seed)
+
+'''
+Box chart link: http://blog.bharatbhole.com/creating-boxplots-with-matplotlib/
+'''
+def draw_box_greedy(initial_seed=1358, seed_iterations=5, seed_step_size=100, step_size_lambda=0.05, step_size_gamma=0.1):
+    data = []
+    seed = initial_seed
+    gamma_length = int(1/step_size_gamma) + 1;
+    gammas = [[] for i in range(gamma_length)]
+
+    for i in range(seed_iterations):
+        Phi = np.random.rand(num_states, num_features)
+        gamma_lambda_loss = find_optimal_lambda_greedy(Phi, step_size_lambda, step_size_gamma)
+        for j in range(gamma_length):
+            gammas[j].append(gamma_lambda_loss[j,1])
+        seed += seed_step_size
+        set_seed(seed)
+
+    for k in range(gamma_length):
+        data.append(gammas[k])
+
+    fig = plt.figure(1, figsize=(9, 6))
+    ax = fig.add_subplot(111)
+    ax.boxplot(data)
+    plt.title('Optimal lambda for each gamma using greedy search')
+    #TODO: fix gamma labels
+    plt.xlabel('Gamma')
+    plt.ylabel('Optimal lambda')
+    plt.show()
+    #fig.savefig('box_greedy.png', bbox_inches='tight')
 
 
 env = init_env(env_name, seed)
@@ -329,7 +350,8 @@ adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G = Adaptive_LSTD_
                                                                                           Phi, P, V, D, lr,
                                                                                           gamma, lambda_)
 print('Finding optimal lambda using LSTD Lambda Algorithm')
-result = find_optimal_lambda()
+result = find_optimal_lambda_greedy(Phi)
+print('Gamma, Lambda, Loss')
 print(result)
-draw_optimal_lambda_heatmap(gamma=result[:,0], lambda_=result[:,1], loss=result[:,2])
-
+draw_optimal_lambda_greedy(gamma=result[:,0], lambda_=result[:,1])
+draw_box_greedy()
