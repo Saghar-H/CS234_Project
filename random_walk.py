@@ -150,7 +150,6 @@ def run_env_episodes(num_episodes):
 
 def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsilon=0.0):
     # LSTD operator:
-    env = init_env(env_name, seed)
     LSTD_lambda = LSTD(num_features, epsilon=0.0)
     G = {}
     running_loss = []
@@ -286,20 +285,20 @@ def compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger=
     return cv_loss
 
 
-def find_optimal_lambda_greedy(trajectories, Phi,Gs, step_size_lambda=0.05, step_size_gamma=0.1, logger = False):
+def find_optimal_lambda_greedy(trajectories, Phi, Gs, step_size_lambda=0.05, step_size_gamma=0.1, logger = False):
     gamma_lambda_loss = []
-    gamma = 0.8
-    while gamma == 0.8:
+    gamma = 0.0
+    while gamma < 1:
         lambda_ = 0.0
         optimal_loss = np.inf
         while lambda_ < 1:
-            print("Finding CV loss for lambda = {0} and gamma = {1}".format(lambda_, gamma))
-            # _, _, loss, _ = LSTD_algorithm(trajectories, Phi, num_features, gamma, lambda_)
-            loss = compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger)
+            #print("Finding CV loss for lambda = {0} and gamma = {1}".format(lambda_, gamma))
+            _, _, loss, _ = LSTD_algorithm(trajectories, Phi, num_features, gamma, lambda_)
+            #loss = compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger)
             if loss < optimal_loss:
                 optimal_loss = loss
                 optimal_lambda = lambda_
-            print("CV loss for lambda = {0} and gamma = {1} is = {2}".format(lambda_, gamma, loss)) 
+            #print("CV loss for lambda = {0} and gamma = {1} is = {2}".format(lambda_, gamma, loss)) 
             lambda_ += step_size_lambda
         gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])       
         gamma += step_size_gamma
@@ -322,19 +321,21 @@ def set_seed(seed):
 '''
 Box chart link: http://blog.bharatbhole.com/creating-boxplots-with-matplotlib/
 '''
-def draw_box_greedy(initial_seed=1358, seed_iterations=5, seed_step_size=100, step_size_lambda=0.05, step_size_gamma=0.1):
+def draw_box_greedy(trajectories, initial_seed=1358, seed_iterations=50, seed_step_size=100, step_size_lambda=0.05, step_size_gamma=0.1):
     data = []
     seed = initial_seed
     gamma_length = int(1/step_size_gamma) + 1;
     gammas = [[] for i in range(gamma_length)]
 
     for i in range(seed_iterations):
-        Phi = np.random.rand(num_states, num_features)
-        gamma_lambda_loss = find_optimal_lambda_greedy(Phi, step_size_lambda, step_size_gamma)
+        print(Phi)
+        gamma_lambda_loss = find_optimal_lambda_greedy(trajectories, Phi, '')
+        print(gamma_lambda_loss)
         for j in range(gamma_length):
             gammas[j].append(gamma_lambda_loss[j,1])
         seed += seed_step_size
         set_seed(seed)
+        D, V, trajectories, Gs = run_env_episodes(num_episodes)
 
     for k in range(gamma_length):
         data.append(gammas[k])
@@ -342,8 +343,10 @@ def draw_box_greedy(initial_seed=1358, seed_iterations=5, seed_step_size=100, st
     fig = plt.figure(1, figsize=(9, 6))
     ax = fig.add_subplot(111)
     ax.boxplot(data)
-    plt.title('Optimal lambda for each gamma using greedy search')
-    #TODO: fix gamma labels
+    plt.title('Optimal lambda for each gamma using greedy search in 50 iterations')
+    #gamma range
+    ax.set_xticklabels([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+    ax.yaxis.grid(True, linestyle='-', color='lightgrey', alpha=0.5)
     plt.xlabel('Gamma')
     plt.ylabel('Optimal lambda')
     plt.show()
@@ -395,8 +398,8 @@ adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda
 #cv_loss = compute_CV_loss(trajectories, Phi, num_features, gamma, adaptive_lambda_val, Gs, logger)
 
 print('Finding optimal lambda using LSTD Lambda Algorithm')
-result = find_optimal_lambda_greedy(trajectories, Phi,Gs)
-print('Gamma, Lambda, Loss')
-print(result)
-draw_optimal_lambda_greedy(gamma=result[:,0], lambda_=result[:,1])
-draw_box_greedy()
+#result = find_optimal_lambda_greedy(trajectories, Phi,Gs)
+#print('Gamma, Lambda, Loss')
+#print(result)
+#draw_optimal_lambda_greedy(gamma=result[:,0], lambda_=result[:,1])
+draw_box_greedy(trajectories)
