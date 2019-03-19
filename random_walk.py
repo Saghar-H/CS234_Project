@@ -150,7 +150,6 @@ def run_env_episodes(num_episodes):
 
 def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsilon=0.0):
     # LSTD operator:
-    env = init_env(env_name, seed)
     LSTD_lambda = LSTD(num_features, epsilon=0.0)
     G = {}
     running_loss = []
