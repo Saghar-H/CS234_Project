@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from lstd import LSTD
 from pprint import pprint
 from adam import ADAM
-from tensorboard_utils import Logger
+#from tensorboard_utils import Logger
 
 ################  Parameters #################
 done = False
@@ -274,12 +274,12 @@ def compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger=
             tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2
             loto_loss.append(tuple_loss)
             
-            if logger:
-                logger.log_scalar('average trajectories loss', loss, step)
-                logger.log_scalar('current tuple loto cv', tuple_loss, step)
-                logger.log_scalar('mean loto cv', np.mean(loto_loss), step)
-                logger.writer.flush()
-                step += 1
+            #if logger:
+            #    logger.log_scalar('average trajectories loss', loss, step)
+            #    logger.log_scalar('current tuple loto cv', tuple_loss, step)
+            #    logger.log_scalar('mean loto cv', np.mean(loto_loss), step)
+            #    logger.writer.flush()
+            #    step += 1
 
         print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)))
 
@@ -294,8 +294,8 @@ def find_optimal_lambda_greedy(Phi, step_size_lambda=0.05, step_size_gamma=0.1):
         lambda_ = 0.0
         optimal_loss = np.inf
         while lambda_ < 1:
-            # _, _, loss, _ = LSTD_algorithm(trajectories, Phi, num_features, gamma, lambda_)
-            loss = compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger=False)
+            _, _, loss, _ = LSTD_algorithm(trajectories, Phi, num_features, gamma, lambda_)
+            #loss = compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs)
             if loss < optimal_loss:
                 optimal_loss = loss
                 optimal_lambda = lambda_
@@ -313,10 +313,6 @@ def draw_optimal_lambda_greedy(gamma, lambda_):
     plt.grid()
     plt.show()
 
-def set_seed(seed):
-    random.seed(seed)
-    env.seed(seed)
-    np.random.seed(seed)
 
 '''
 Box chart link: http://blog.bharatbhole.com/creating-boxplots-with-matplotlib/
@@ -328,12 +324,12 @@ def draw_box_greedy(initial_seed=1358, seed_iterations=5, seed_step_size=100, st
     gammas = [[] for i in range(gamma_length)]
 
     for i in range(seed_iterations):
-        Phi = np.random.rand(num_states, num_features)
         gamma_lambda_loss = find_optimal_lambda_greedy(Phi, step_size_lambda, step_size_gamma)
         for j in range(gamma_length):
             gammas[j].append(gamma_lambda_loss[j,1])
         seed += seed_step_size
-        set_seed(seed)
+        #init_env()
+		#run_env_episodes()
 
     for k in range(gamma_length):
         data.append(gammas[k])
@@ -352,9 +348,9 @@ def draw_box_greedy(initial_seed=1358, seed_iterations=5, seed_step_size=100, st
 
 env = init_env(env_name, seed)
 
-logger = None
-if log_events:
-    logger = Logger('/Users/siamak/temp/logs/test', 'adaptive_lambda_008_gamma_08')
+#logger = None
+#if log_events:
+#    logger = Logger('/Users/siamak/temp/logs/test', 'adaptive_lambda_008_gamma_08')
 transition_probs = env.env.P
 print("###############Transition Probabilities####################")
 print(transition_probs)
@@ -387,15 +383,15 @@ P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 
 
 print('Running the Adaptive LSTD Lambda Algorithm ...')
-adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
-                                                                                          Phi, P, V, D, lr,
-                                                                                          gamma, default_lambda)
-
-cv_loss = compute_CV_loss(trajectories, Phi, num_features, gamma, adaptive_lambda_val, Gs, logger)
+#adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
+#                                                                                          Phi, P, V, D, lr,
+#                                                                                          gamma, default_lambda)
+#
+#cv_loss = compute_CV_loss(trajectories, Phi, num_features, gamma, adaptive_lambda_val, Gs)
 
 print('Finding optimal lambda using LSTD Lambda Algorithm')
 result = find_optimal_lambda_greedy(Phi)
 print('Gamma, Lambda, Loss')
 print(result)
 draw_optimal_lambda_greedy(gamma=result[:,0], lambda_=result[:,1])
-draw_box_greedy()
+#draw_box_greedy()
