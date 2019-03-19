@@ -280,26 +280,28 @@ def compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger=
                 logger.writer.flush()
                 step += 1
 
-        print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)))
+                print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)))
 
     cv_loss = np.mean(loto_loss)
     return cv_loss
 
 
-def find_optimal_lambda_greedy(Phi, step_size_lambda=0.05, step_size_gamma=0.1):
+def find_optimal_lambda_greedy(trajectories, Phi,Gs, step_size_lambda=0.05, step_size_gamma=0.1, logger = False):
     gamma_lambda_loss = []
-    gamma = 0.0
-    while gamma < 1:
+    gamma = 0.8
+    while gamma == 0.8:
         lambda_ = 0.0
         optimal_loss = np.inf
         while lambda_ < 1:
+            print("Finding CV loss for lambda = {0} and gamma = {1}".format(lambda_, gamma))
             # _, _, loss, _ = LSTD_algorithm(trajectories, Phi, num_features, gamma, lambda_)
-            loss = compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger=False)
+            loss = compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger)
             if loss < optimal_loss:
                 optimal_loss = loss
                 optimal_lambda = lambda_
+            print("CV loss for lambda = {0} and gamma = {1} is = {2}".format(lambda_, gamma, loss)) 
             lambda_ += step_size_lambda
-        gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])
+        gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])       
         gamma += step_size_gamma
     return np.array(gamma_lambda_loss)
 
@@ -390,10 +392,10 @@ adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda
                                                                                           Phi, P, V, D, lr,
                                                                                           gamma, default_lambda)
 
-cv_loss = compute_CV_loss(trajectories, Phi, num_features, gamma, adaptive_lambda_val, Gs, logger)
+#cv_loss = compute_CV_loss(trajectories, Phi, num_features, gamma, adaptive_lambda_val, Gs, logger)
 
 print('Finding optimal lambda using LSTD Lambda Algorithm')
-result = find_optimal_lambda_greedy(Phi)
+result = find_optimal_lambda_greedy(trajectories, Phi,Gs)
 print('Gamma, Lambda, Loss')
 print(result)
 draw_optimal_lambda_greedy(gamma=result[:,0], lambda_=result[:,1])
