@@ -105,12 +105,13 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D, R):
     psi_gradient = gamma * phi_t @ D @ inv1 @ P @ inv1 @ I_gamma_P
     H_gradient = phi @ inv2 @ (psi_gradient - psi_gradient @ phi @ inv2 @ psi)
     diag_H_gradient = np.diag(np.diag(H_gradient))
-    d_inv2_gradient = d_inv1 @ (diag_H_gradient @ d_inv1 + d_inv1 @ diag_H_gradient) @ d_inv1
+    #d_inv2_gradient = d_inv1 @ (diag_H_gradient @ d_inv1 + d_inv1 @ diag_H_gradient) @ d_inv1
+    d_inv2_gradient = d_inv1 @ diag_H_gradient @ d_inv2
     # print('*****---- H_gradient ----*****')
     # print(H_gradient)
     H_V = phi @ theta
     term1 = -R_t @ H_gradient @ d_inv2 @ I_H @ R
-    term2 = R_t @ I_H @ d_inv2_gradient @ I_H @ R
+    term2 = 2 * R_t @ I_H @ d_inv2_gradient @ I_H @ R
     term3 = -R_t @ I_H @ d_inv2 @ H_gradient @ R
     cv_gradient = term1 + term2 + term3
     # print("#### CV Gradient #####")
@@ -314,8 +315,8 @@ def find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi, Gs, step_size
     gamma_lambda_loss = []
     gamma = 0.0
     while gamma < 1:
-        #_, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr, gamma, lambda_=0.5, epsilon=0.0)
-        _, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr, gamma, lambda_=np.random.rand(), epsilon=0.0)
+        _, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr, gamma, lambda_=0.1, epsilon=0.0)
+        #_, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr, gamma, lambda_=np.random.rand(), epsilon=0.0)
         gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])       
         gamma += step_size_gamma
     return np.array(gamma_lambda_loss)
@@ -323,7 +324,7 @@ def find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi, Gs, step_size
 
 def draw_optimal_lambda_grid_search(gamma, lambda_):
     plt.plot(gamma, lambda_, 'ro')
-    plt.title('Optimal lambda for each gamma using grid search in 100 iterations')
+    plt.title('Optimal lambda for each gamma using grid search in 10 iterations')
     plt.ylabel('Optimal lambda')
     plt.xlabel('Gamma')
     plt.grid()
@@ -337,16 +338,17 @@ def set_seed(seed):
 '''
 Box chart link: http://blog.bharatbhole.com/creating-boxplots-with-matplotlib/
 '''
-def draw_box_grid_search(trajectories, initial_seed=1358, seed_iterations=10, seed_step_size=100, step_size_lambda=0.05, step_size_gamma=0.1):
+def draw_box_grid_search(trajectories, R, initial_seed=1358, seed_iterations=10, seed_step_size=100, step_size_lambda=0.05, step_size_gamma=0.1):
     data = []
     seed = initial_seed
     gamma_length = int(1/step_size_gamma) + 1;
     gammas = [[] for i in range(gamma_length)]
 
     for i in range(seed_iterations):
-        print(Phi)
-        #gamma_lambda_loss = find_adaptive_optimal_lambda_grid_search(trajectories, Phi, '')
-        gamma_lambda_loss = find_optimal_lambda_grid_search(trajectories, Phi, '')
+        gamma_lambda_loss = find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi, '')
+        print('rewards*****')
+        print(R)
+        #gamma_lambda_loss = find_optimal_lambda_grid_search(trajectories, Phi, '')
         #print(gamma_lambda_loss)
         for j in range(gamma_length):
             gammas[j].append(gamma_lambda_loss[j,1])
@@ -360,8 +362,8 @@ def draw_box_grid_search(trajectories, initial_seed=1358, seed_iterations=10, se
     fig = plt.figure(1, figsize=(9, 6))
     ax = fig.add_subplot(111)
     ax.boxplot(data)
-    plt.title('Adaptive lambda for each gamma in 100 iterations')
-    #plt.title('Optimal lambda for each gamma using grid search in 100 iterations')
+    plt.title('Adaptive lambda for each gamma in 10 iterations')
+    #plt.title('Optimal lambda for each gamma using grid search in 10 iterations')
     #gamma range
     ax.set_xticklabels([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
     ax.yaxis.grid(True, linestyle='-', color='lightgrey', alpha=0.5)
@@ -370,7 +372,6 @@ def draw_box_grid_search(trajectories, initial_seed=1358, seed_iterations=10, se
     #plt.ylabel('Optimal lambda')
     plt.show()
     #fig.savefig('box_grid.png', bbox_inches='tight')
-
 
 
 env = init_env(env_name, seed)
@@ -417,12 +418,12 @@ adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda
 #cv_loss = compute_CV_loss(trajectories, Phi, num_features, gamma, adaptive_lambda_val, Gs, logger)
 
 print('Finding optimal lambda using LSTD Lambda Algorithm')
-result = find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi,Gs)
+#result = find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi,Gs)
 #print('Gamma, Lambda, Loss')
 #print(result)
 #draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
-#result = find_optimal_lambda_grid_search(trajectories, Phi,Gs)
+result = find_optimal_lambda_grid_search(trajectories, Phi,Gs)
 print('Gamma, Lambda, Loss')
 print(result)
 draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
-draw_box_grid_search(trajectories)
+draw_box_grid_search(trajectories, R)
