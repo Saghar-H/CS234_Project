@@ -74,10 +74,13 @@ def compute_P(transition_probs, num_actions, num_states):
     return ret
 
 
-def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
+def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D, R):
+    #print('****rewards*****')
+    #print(R)
     I = np.eye(len(P), len(P[0]))
     phi_t = phi.transpose()
-    V_t = V.transpose()
+    #V_t = V.transpose()
+    R_t = R.transpose()
     I_gamma_P = I - gamma * P
     # print('*****---- P ----*****')
     # print(P)
@@ -106,9 +109,9 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
     # print('*****---- H_gradient ----*****')
     # print(H_gradient)
     H_V = phi @ theta
-    term1 = -V_t @ H_gradient @ d_inv2 @ I_H @ V
-    term2 = V_t @ I_H @ d_inv2_gradient @ I_H @ V
-    term3 = -V_t @ I_H @ d_inv2 @ H_gradient @ V
+    term1 = -R_t @ H_gradient @ d_inv2 @ I_H @ R
+    term2 = R_t @ I_H @ d_inv2_gradient @ I_H @ R
+    term3 = -R_t @ I_H @ d_inv2 @ H_gradient @ R
     cv_gradient = term1 + term2 + term3
     # print("#### CV Gradient #####")
     # print(cv_gradient)
@@ -118,6 +121,7 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D):
 def run_env_episodes(num_episodes):
     D = np.ones(env.observation_space.n) * 1e-10
     V = np.zeros(env.observation_space.n)
+    R = np.zeros(env.observation_space.n)
     trajectories = {}
     Gs = {}
     total_steps = 0
@@ -142,10 +146,11 @@ def run_env_episodes(num_episodes):
 
         for i in range(len(ep_states)):
             V[ep_states[i]] += ep_discountedrewards[i]
+            R[ep_states[i]] += ep_rewards[i]
 
     print('Monte Carlo D:{0}'.format(D * 1.0 / total_steps, total_steps))
     print('Monte Carlo V:{0}'.format(V * 1.0 / D))
-    return np.diag(D / total_steps), V / D, trajectories, Gs
+    return np.diag(D / total_steps), V / D, trajectories, Gs, R/D
 
 
 def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsilon=0.0):
@@ -189,7 +194,7 @@ def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsi
     return LSTD_lambda, theta, average_loss, G
 
 
-def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, gamma=0.4, lambda_=0.2, epsilon=0.0):
+def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.001, gamma=0.4, lambda_=0.2, epsilon=0.0):
     # LSTD operator:
     adaptive_LSTD_lambda = LSTD(num_features, epsilon=0.0)
     G = {}
@@ -219,10 +224,10 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, 
         # if new_lambda >= 0 and new_lambda <= 1:
         #   lambda_ = new_lambda
         #   print('current lambda:{0}'.format(lambda_))
-        grad = compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
+        grad = compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D, R)
         # adam_optimizer.update(grad, ep)
         # new_lambda = adam_optimizer.theta
-        new_lambda = lambda_ - lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
+        new_lambda = lambda_ - lr * grad
         if new_lambda >= 0 and new_lambda <= 1:
             lambda_ = new_lambda
             # print('current lambda:{0}'.format(lambda_))
@@ -239,10 +244,10 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr=0.001, 
     loss, _ = calculate_batch_loss(trajectories, G, theta)
     # print('episode loss:{0}'.format(loss))
     # print(LSTD_lambda.A, LSTD_lambda.b)
-    print("Final Lambda: {0}".format(lambda_))
-    print("average running loss in training: ", np.mean(running_loss))
-    print("average loss after training: ", np.mean(loss))
-    return adaptive_LSTD_lambda, theta, loss, G, lambda_
+    #print("Final Lambda: {0}".format(lambda_))
+    #print("average running loss in training: ", np.mean(running_loss))
+    #print("average loss after training: ", np.mean(loss))
+    return adaptive_LSTD_lambda, theta, np.mean(loss), G, lambda_
 
 
 def compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger=False,
@@ -285,29 +290,40 @@ def compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger=
     return cv_loss
 
 
-def find_optimal_lambda_greedy(trajectories, Phi, Gs, step_size_lambda=0.05, step_size_gamma=0.1, logger = False):
+def find_optimal_lambda_grid_search(trajectories, Phi, Gs, step_size_lambda=0.05, step_size_gamma=0.1, logger = False):
     gamma_lambda_loss = []
     gamma = 0.0
     while gamma < 1:
         lambda_ = 0.0
         optimal_loss = np.inf
         while lambda_ < 1:
-            #print("Finding CV loss for lambda = {0} and gamma = {1}".format(lambda_, gamma))
+            print("Finding CV loss for lambda = {0} and gamma = {1}".format(lambda_, gamma))
             _, _, loss, _ = LSTD_algorithm(trajectories, Phi, num_features, gamma, lambda_)
             #loss = compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger)
             if loss < optimal_loss:
                 optimal_loss = loss
                 optimal_lambda = lambda_
-            #print("CV loss for lambda = {0} and gamma = {1} is = {2}".format(lambda_, gamma, loss)) 
+            print("CV loss for lambda = {0} and gamma = {1} is = {2}".format(lambda_, gamma, loss)) 
             lambda_ += step_size_lambda
         gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])       
         gamma += step_size_gamma
     return np.array(gamma_lambda_loss)
 
+	
+def find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi, Gs, step_size_lambda=0.05, step_size_gamma=0.1, logger = False):
+    gamma_lambda_loss = []
+    gamma = 0.0
+    while gamma < 1:
+        #_, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, lr, gamma, lambda_=0.5, epsilon=0.0)
+        _, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr, gamma, lambda_=np.random.rand(), epsilon=0.0)
+        gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])       
+        gamma += step_size_gamma
+    return np.array(gamma_lambda_loss)
 
-def draw_optimal_lambda_greedy(gamma, lambda_):
+
+def draw_optimal_lambda_grid_search(gamma, lambda_):
     plt.plot(gamma, lambda_, 'ro')
-    plt.title('Optimal lambda for each gamma using greedy search')
+    plt.title('Optimal lambda for each gamma using grid search in 100 iterations')
     plt.ylabel('Optimal lambda')
     plt.xlabel('Gamma')
     plt.grid()
@@ -321,7 +337,7 @@ def set_seed(seed):
 '''
 Box chart link: http://blog.bharatbhole.com/creating-boxplots-with-matplotlib/
 '''
-def draw_box_greedy(trajectories, initial_seed=1358, seed_iterations=50, seed_step_size=100, step_size_lambda=0.05, step_size_gamma=0.1):
+def draw_box_grid_search(trajectories, initial_seed=1358, seed_iterations=10, seed_step_size=100, step_size_lambda=0.05, step_size_gamma=0.1):
     data = []
     seed = initial_seed
     gamma_length = int(1/step_size_gamma) + 1;
@@ -329,13 +345,14 @@ def draw_box_greedy(trajectories, initial_seed=1358, seed_iterations=50, seed_st
 
     for i in range(seed_iterations):
         print(Phi)
-        gamma_lambda_loss = find_optimal_lambda_greedy(trajectories, Phi, '')
-        print(gamma_lambda_loss)
+        #gamma_lambda_loss = find_adaptive_optimal_lambda_grid_search(trajectories, Phi, '')
+        gamma_lambda_loss = find_optimal_lambda_grid_search(trajectories, Phi, '')
+        #print(gamma_lambda_loss)
         for j in range(gamma_length):
             gammas[j].append(gamma_lambda_loss[j,1])
         seed += seed_step_size
         set_seed(seed)
-        D, V, trajectories, Gs = run_env_episodes(num_episodes)
+        D, V, trajectories, Gs, R = run_env_episodes(num_episodes)
 
     for k in range(gamma_length):
         data.append(gammas[k])
@@ -343,14 +360,16 @@ def draw_box_greedy(trajectories, initial_seed=1358, seed_iterations=50, seed_st
     fig = plt.figure(1, figsize=(9, 6))
     ax = fig.add_subplot(111)
     ax.boxplot(data)
-    plt.title('Optimal lambda for each gamma using greedy search in 50 iterations')
+    plt.title('Adaptive lambda for each gamma in 100 iterations')
+    #plt.title('Optimal lambda for each gamma using grid search in 100 iterations')
     #gamma range
     ax.set_xticklabels([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
     ax.yaxis.grid(True, linestyle='-', color='lightgrey', alpha=0.5)
     plt.xlabel('Gamma')
-    plt.ylabel('Optimal lambda')
+    plt.ylabel('Adaptive lambda')
+    #plt.ylabel('Optimal lambda')
     plt.show()
-    #fig.savefig('box_greedy.png', bbox_inches='tight')
+    #fig.savefig('box_grid.png', bbox_inches='tight')
 
 
 
@@ -363,7 +382,7 @@ transition_probs = env.env.P
 print("###############Transition Probabilities####################")
 print(transition_probs)
 print('Generate Monte Carlo Estimates of D and V...')
-D, V, trajectories, Gs = run_env_episodes(num_episodes)
+D, V, trajectories, Gs, R = run_env_episodes(num_episodes)
 print('Done finding D and V!')
 Phi = np.random.rand(num_states, num_features)
 # D = np.diag([0.12443139 ,0.24981192 ,0.25088312, 0.25018808 ,0.12468549])
@@ -392,14 +411,18 @@ P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 
 print('Running the Adaptive LSTD Lambda Algorithm ...')
 adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
-                                                                                          Phi, P, V, D, lr,
+                                                                                          Phi, P, V, D, R, lr,
                                                                                           gamma, default_lambda)
 
 #cv_loss = compute_CV_loss(trajectories, Phi, num_features, gamma, adaptive_lambda_val, Gs, logger)
 
 print('Finding optimal lambda using LSTD Lambda Algorithm')
-#result = find_optimal_lambda_greedy(trajectories, Phi,Gs)
+result = find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi,Gs)
 #print('Gamma, Lambda, Loss')
 #print(result)
-#draw_optimal_lambda_greedy(gamma=result[:,0], lambda_=result[:,1])
-draw_box_greedy(trajectories)
+#draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
+#result = find_optimal_lambda_grid_search(trajectories, Phi,Gs)
+print('Gamma, Lambda, Loss')
+print(result)
+draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
+draw_box_grid_search(trajectories)
