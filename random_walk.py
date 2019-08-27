@@ -87,7 +87,8 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D, R):
     # print('*****---- P ----*****')
     # print(P)
     inv1 = np.linalg.pinv(I - gamma * lstd_lambda * P)
-    psi = phi_t @ D @ inv1 @ I_gamma_P
+    #psi = phi_t @ D @ inv1 @ I_gamma_P
+    psi = phi_t @ D @ inv1
     # print('*****---- psi ----*****')
     # print(psi)
     inv2 = np.linalg.pinv(psi @ phi)
@@ -357,6 +358,7 @@ def draw_box_grid_search(trajectories, R, initial_seed=1358, seed_iterations=100
         #print(gamma_lambda_loss)
         for j in range(gamma_length):
             gammas[j].append(gamma_lambda_loss[j,1])
+        
         seed += seed_step_size
         set_seed(seed)
         D, V, trajectories, Gs, R = run_env_episodes(num_episodes)
@@ -367,7 +369,7 @@ def draw_box_grid_search(trajectories, R, initial_seed=1358, seed_iterations=100
     fig = plt.figure(1, figsize=(9, 6))
     ax = fig.add_subplot(111)
     ax.boxplot(data)
-    plt.title('Adaptive lambda for each gamma in 10 iterations')
+    plt.title('Adaptive lambda for each gamma in 100 iterations')
     #plt.title('Optimal lambda for each gamma using grid search in 100 iterations')
     #gamma range
     ax.set_xticklabels([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
@@ -430,7 +432,7 @@ else:
 print('Running the Adaptive LSTD Lambda Algorithm ...')
 adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
                                                                                           Phi, P, V, D, R, lr,
-                                                                                          gamma, default_lambda)
+                                                                                         gamma, default_lambda)
 
 logger = None
 if log_events:
