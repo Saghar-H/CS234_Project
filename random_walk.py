@@ -23,8 +23,8 @@ lr = 0.0001
 log_events = True
 use_adaptive_lambda = True
 
-if log_events:
-    from tensorboard_utils import Logger
+#if log_events:
+#    from tensorboard_utils import Logger
    
 ##########################################################
 
@@ -87,7 +87,8 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D, R):
     # print('*****---- P ----*****')
     # print(P)
     inv1 = np.linalg.pinv(I - gamma * lstd_lambda * P)
-    psi = phi_t @ D @ inv1 @ I_gamma_P
+    #psi = phi_t @ D @ inv1 @ I_gamma_P
+    psi = phi_t @ D @ inv1
     # print('*****---- psi ----*****')
     # print(psi)
     inv2 = np.linalg.pinv(psi @ phi)
@@ -238,7 +239,7 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
         new_lambda = lambda_ - lr * grad
         if new_lambda >= 0 and new_lambda <= 1:
             lambda_ = new_lambda
-            print('current lambda:{0}'.format(lambda_))
+            #print('current lambda:{0}'.format(lambda_))
         ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
         # print('ep_discounted:{0}'.format(ep_discountedrewards))
         if len(ep_discountedrewards) > 0:
@@ -322,8 +323,8 @@ def find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi, Gs, step_size
     gamma_lambda_loss = []
     gamma = 0.0
     while gamma < 1:
-        #_, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr, gamma, lambda_=0.5, epsilon=0.0)
-        _, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr, gamma, lambda_=np.random.rand(), epsilon=0.0)
+        _, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr, gamma, lambda_=0.5, epsilon=0.0)
+        #_, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr, gamma, lambda_=np.random.rand(), epsilon=0.0)
         gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])       
         gamma += step_size_gamma
     return np.array(gamma_lambda_loss)
@@ -345,7 +346,7 @@ def set_seed(seed):
 '''
 Box chart link: http://blog.bharatbhole.com/creating-boxplots-with-matplotlib/
 '''
-def draw_box_grid_search(trajectories, R, initial_seed=1358, seed_iterations=100, seed_step_size=100, step_size_lambda=0.05, step_size_gamma=0.1):
+def draw_box_grid_search(trajectories, R, initial_seed=1358, seed_iterations=1000, seed_step_size=100, step_size_lambda=0.05, step_size_gamma=0.1):
     data = []
     seed = initial_seed
     gamma_length = int(1/step_size_gamma) + 1;
@@ -357,6 +358,7 @@ def draw_box_grid_search(trajectories, R, initial_seed=1358, seed_iterations=100
         #print(gamma_lambda_loss)
         for j in range(gamma_length):
             gammas[j].append(gamma_lambda_loss[j,1])
+        
         seed += seed_step_size
         set_seed(seed)
         D, V, trajectories, Gs, R = run_env_episodes(num_episodes)
@@ -367,7 +369,7 @@ def draw_box_grid_search(trajectories, R, initial_seed=1358, seed_iterations=100
     fig = plt.figure(1, figsize=(9, 6))
     ax = fig.add_subplot(111)
     ax.boxplot(data)
-    plt.title('Adaptive lambda for each gamma in 10 iterations')
+    plt.title('Adaptive lambda for each gamma in 1000 iterations')
     #plt.title('Optimal lambda for each gamma using grid search in 100 iterations')
     #gamma range
     ax.set_xticklabels([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
@@ -416,29 +418,29 @@ P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 
 #print('Finding optimal lambda using LSTD Lambda Algorithm')
 
-if use_adaptive_lambda:
-    print('Running the Adaptive LSTD Lambda Algorithm ...')
-    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
-                                                                                              Phi, P, V, D, lr,
-                                                                                              gamma, default_lambda)
-    selected_lambda = adaptive_lambda_val
-    print('Adaptive Lambda Value: {0}'.format(selected_lambda))
-else:
-    print('Using default Lambda : {0}'.format(default_lambda))
-    selected_lambda = default_lambda
+#if use_adaptive_lambda:
+#    print('Running the Adaptive LSTD Lambda Algorithm ...')
+#    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
+#                                                                                              Phi, P, V, D, lr,
+#                                                                                              gamma, default_lambda)
+#    selected_lambda = adaptive_lambda_val
+#    print('Adaptive Lambda Value: {0}'.format(selected_lambda))
+#else:
+#    print('Using default Lambda : {0}'.format(default_lambda))
+#    selected_lambda = default_lambda
 
-print('Running the Adaptive LSTD Lambda Algorithm ...')
-adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
-                                                                                          Phi, P, V, D, R, lr,
-                                                                                          gamma, default_lambda)
+#print('Running the Adaptive LSTD Lambda Algorithm ...')
+#adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
+#                                                                                          Phi, P, V, D, R, lr,
+#                                                                                          gamma, default_lambda)
 
-logger = None
-if log_events:
-    logger_name = 'Adaptive lambda_{0:.3}_Gamma_{1:.3}'.format(selected_lambda, gamma)
-    logger = Logger('/Users/siamak/temp/logs/test', logger_name)
+#logger = None
+#if log_events:
+#    logger_name = 'Adaptive lambda_{0:.3}_Gamma_{1:.3}'.format(selected_lambda, gamma)
+#    logger = Logger('/Users/siamak/temp/logs/test', logger_name)
 
 
-cv_loss = compute_CV_loss(trajectories, Phi, num_features, gamma, selected_lambda, Gs, logger)
+#cv_loss = compute_CV_loss(trajectories, Phi, num_features, gamma, selected_lambda, Gs, logger)
 
 print('Finding optimal lambda using LSTD Lambda Algorithm')
 result = find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi,Gs)
