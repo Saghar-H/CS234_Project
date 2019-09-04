@@ -47,9 +47,41 @@ def compute_b_gradient(Z_grad:np.ndarray,
 
 	return sum_inner * 1.0 / (Z_grad.shape[1])
 
+def compute_z(_lambda:float, 
+			  gamma:float, 
+			  Phi:np.ndarray, 
+			  ep_states:np.ndarray, 
+			  j:int
+			  )-> np.ndarray:
+
+	'''
+	inputs:
+	Phi: sxd
+	ep_states:Tx1
+
+	return:
+	z: dx1
+	'''
+
+	ret = 0
+	for i in range(j+1):
+		ret += (gamma * _lambda) ** (j-i) * Phi[ep_states[i],:]
+
+	return ret
+
 def compute_z_gradient(_lambda, gamma, Phi, ep_states, j):
+    '''
+    inputs: 
+    _lambda: 1x1
+    gamma: 1x1
+    Phi: Txd
+    j: 1x1
+
+    return: 
+    gradient of z at timestep j: 1xd
+    '''
     result = 0
-    for i in range(j):
+    for i in range(j+1):
 	    result += (j-i)* (gamma ** (j-i)) * (_lambda ** (j-i-1)) * Phi[ep_states[i], :]
     return result
 
