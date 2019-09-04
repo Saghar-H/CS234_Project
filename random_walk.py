@@ -230,21 +230,27 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
         Z_gradient = np.zeros((num_features, num_states))
         H_diag = np.zeros(num_states) # n 
         eps = np.zeros(num_states)
+        states_count = np.zeros(num_states)
         episode_loss = 0
         cur_state = traj[0][0]
         adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
 
         for timestep in range(len(traj)):
+
             cur_state, reward, next_state, done = traj[timestep]
             adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], gamma, lambda_, timestep)
             ep_rewards.append(reward)
             ep_states.append(cur_state)
+        for timestep in range(len(traj)-1):
+            cur_state, reward, next_state, done = traj[timestep]
             # To-do : change the following update to running average
-            Z[:,cur_state] = adaptive_LSTD_lambda.z
-            Z_gradient[:, cur_state] = utils.compute_z_gradient(lambda_, gamma, Phi, ep_states, timestep)
-            A_inv = A_inv = np.linalg.pinv(adaptive_LSTD_lambda.A)
-            H[cur_state] = utils.compute_hjj(Phi, _lambda, gamma, ep_states, timestep, A_inv)
-            eps[cur_state] = utils.compute_eps_t(Phi, adaptive_LSTD_lambda.theta, gamma, reward, ep_states, timestep)
+            states_count[cur_state] += 1
+            ct = states_count[cur_state]
+            Z[:,cur_state] = (ct-1)/ct *Z[:,cur_state]+ 1/ct * utils.compute_z(lambda_, gamma, Phi, ep_states, timestep )
+            Z_gradient[:, cur_state] = (ct-1)/ct * Z_gradient[:, cur_state] + 1/ct * utils.compute_z_gradient(lambda_, gamma, Phi, ep_states, timestep)
+            A_inv = np.linalg.pinv(adaptive_LSTD_lambda.A)
+            H_diag[cur_state] = (ct-1)/ct * H_diag[cur_state] + 1/ct * utils.compute_hjj(Phi, lambda_, gamma, ep_states, timestep, A_inv)
+            eps[cur_state] = (ct-1)/ct * eps[cur_state] + 1/ct * utils.compute_eps_t(Phi, adaptive_LSTD_lambda.theta, gamma, reward, ep_states, timestep)
         theta = adaptive_LSTD_lambda.theta
         # if ep > 1000 :
         # new_lambda = lambda_ -  lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)

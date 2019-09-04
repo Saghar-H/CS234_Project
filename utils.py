@@ -1,4 +1,5 @@
 import numpy as np
+import pdb
 from pprint import pprint
 
 def compute_A_inv_gradient(
@@ -94,7 +95,7 @@ def compute_z_gradient(_lambda, gamma, Phi, ep_states, j):
 
 def compute_hjj(Phi, _lambda, gamma, ep_states, j, A_inv):
     cur_state, next_state = ep_states[j], ep_states[j+1]
-    z = compute_z(_lambda, Phi, ep_states, j)
+    z = compute_z(_lambda,gamma,  Phi, ep_states, j)
     term1 = Phi[cur_state, :]-gamma* Phi[next_state, :]
     term2 = term1 @ A_inv
     h_jj = term2 @ z
