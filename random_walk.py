@@ -5,6 +5,7 @@ import numpy as np
 import random
 import copy
 import matplotlib.pyplot as plt
+import utils
 from lstd import LSTD
 from pprint import pprint
 from adam import ADAM
@@ -124,6 +125,13 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D, R):
     # print(cv_gradient)
     return cv_gradient
 
+#def compute_cv_gradient2(Phi, theta, gamma, lambda_, R, A, b, z)
+#    A_inv_lambda_gradient = utils.compute_A_inv_gradient(A, b, z, Phi)
+#    b_lambda_gradient = utils.compute_b_grandient(b)
+#    z_lambda_gradient = compute_z_gradient()
+#    hjj_lambda_gradient = compute_hjj_gradient()
+#    epsilon_lambda_gradient = compute_epsilon_lambda_gradient()
+#    lcv_h_gradient = compute_lcv_h_gradient()
 
 def run_env_episodes(num_episodes):
     D = np.ones(env.observation_space.n) * 1e-10
@@ -218,6 +226,7 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
             continue
         ep_rewards = []
         ep_states = []
+        z = []
         episode_loss = 0
         cur_state = traj[0][0]
         adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
@@ -226,10 +235,10 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
             adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], gamma, lambda_, timestep)
             ep_rewards.append(reward)
             ep_states.append(cur_state)
+            z_t_gradient = utils.compute_z_gradient(lambda_, gamma, Phi, ep_states, timestep)
+            z_gradient.append(z_t)
+            print(z_gradient)
         theta = adaptive_LSTD_lambda.theta
-        A = adaptive_LSTD_lambda.A
-        b = adaptive_LSTD_lambda.b
-        z = adaptive_LSTD_lambda.z
         # if ep > 1000 :
         # new_lambda = lambda_ -  lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
         # print(new_lambda)
@@ -237,12 +246,13 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
         #   lambda_ = new_lambda
         #   print('current lambda:{0}'.format(lambda_))
         grad = compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D, R)
+        # grad = compute_cv_gradient2(Phi, theta, gamma, lambda_, R, A, b, z)
         # adam_optimizer.update(grad, ep)
         # new_lambda = adam_optimizer.theta
         new_lambda = lambda_ - lr * grad
         if new_lambda >= 0 and new_lambda <= 1:
             lambda_ = new_lambda
-            print('current lambda:{0}'.format(lambda_))
+            #print('current lambda:{0}'.format(lambda_))
         ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
         # print('ep_discounted:{0}'.format(ep_discountedrewards))
         if len(ep_discountedrewards) > 0:
