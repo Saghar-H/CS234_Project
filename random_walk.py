@@ -20,7 +20,7 @@ num_episodes = 10000
 gamma = 0.9
 default_lambda = 0.5
 lr = 0.0001
-log_events = True
+log_events = False
 use_adaptive_lambda = True
 
 if log_events:
@@ -227,6 +227,9 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
             ep_rewards.append(reward)
             ep_states.append(cur_state)
         theta = adaptive_LSTD_lambda.theta
+        A = adaptive_LSTD_lambda.A
+        b = adaptive_LSTD_lambda.b
+        z = adaptive_LSTD_lambda.z
         # if ep > 1000 :
         # new_lambda = lambda_ -  lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
         # print(new_lambda)
@@ -421,7 +424,7 @@ P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 if use_adaptive_lambda:
     print('Running the Adaptive LSTD Lambda Algorithm ...')
     adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
-                                                                                              Phi, P, V, D, lr,
+                                                                                              Phi, P, V, D, R, lr,
                                                                                               gamma, default_lambda)
     selected_lambda = adaptive_lambda_val
     print('Adaptive Lambda Value: {0}'.format(selected_lambda))
