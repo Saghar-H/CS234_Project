@@ -42,10 +42,10 @@ def compute_b_gradient(Z_grad:np.ndarray,
 	'''
 	ret = 0
 	sum_inner = 0
-	for i in range(z_grad.shape[1]):
-		sum_inner += z[:,i] * rewards[i]
+	for i in range(Z_grad.shape[1]):
+		sum_inner += Z_grad[:,i] * rewards[i]
 
-	return sum_inner * 1.0 / (z_grad.shape[1])
+	return sum_inner * 1.0 / (Z_grad.shape[1])
 
 def compute_z_gradient(_lambda, gamma, Phi, ep_states, j):
     result = 0
