@@ -81,7 +81,7 @@ def compute_z_gradient(_lambda, gamma, Phi, ep_states, j):
     gradient of z at timestep j: 1xd
     '''
     result = 0
-    for i in range(j):
+    for i in range(j+1):
 	    result += (j-i)* (gamma ** (j-i)) * (_lambda ** (j-i-1)) * Phi[ep_states[i], :]
     return result
 
