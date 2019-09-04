@@ -231,6 +231,8 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
         H_diag = np.zeros(num_states) # n 
         eps = np.zeros(num_states)
         states_count = np.zeros(num_states)
+        epsilon_lambda_gradient = np.zeros(num_states)
+        H_diag_gradient = np.zeros(num_states)
         episode_loss = 0
         cur_state = traj[0][0]
         adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
@@ -241,24 +243,33 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
             adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], gamma, lambda_, timestep)
             ep_rewards.append(reward)
             ep_states.append(cur_state)
+        theta = adaptive_LSTD_lambda.theta
+        A = adaptive_LSTD_lambda.A
+        b = adaptive_LSTD_lambda.b
+        A_inv = np.linalg.pinv(A)
         for timestep in range(len(traj)-1):
             cur_state, reward, next_state, done = traj[timestep]
             # To-do : change the following update to running average
             states_count[cur_state] += 1
             ct = states_count[cur_state]
             Z[:,cur_state] = (ct-1)/ct *Z[:,cur_state]+ 1/ct * utils.compute_z(lambda_, gamma, Phi, ep_states, timestep )
-            Z_gradient[:, cur_state] = (ct-1)/ct * Z_gradient[:, cur_state] + 1/ct * utils.compute_z_gradient(lambda_, gamma, Phi, ep_states, timestep)
-            A_inv = np.linalg.pinv(adaptive_LSTD_lambda.A)
+            Z_gradient[:, cur_state] = (ct-1)/ct * Z_gradient[:, cur_state] + 1/ct * utils.compute_z_gradient(lambda_, gamma, Phi, ep_states, timestep)            
             H_diag[cur_state] = (ct-1)/ct * H_diag[cur_state] + 1/ct * utils.compute_hjj(Phi, lambda_, gamma, ep_states, timestep, A_inv)
-            eps[cur_state] = (ct-1)/ct * eps[cur_state] + 1/ct * utils.compute_eps_t(Phi, adaptive_LSTD_lambda.theta, gamma, reward, ep_states, timestep)
-        theta = adaptive_LSTD_lambda.theta
+            eps[cur_state] = (ct-1)/ct * eps[cur_state] + 1/ct * utils.compute_eps_t(Phi, theta, gamma, reward, ep_states, timestep)
+            epsilon_lambda_gradient[cur_state] = (ct-1)/ct * epsilon_lambda_gradient[cur_state] + 1/ct * utils.compute_epsilon_lambda_gradient(Phi, lambda_, gamma,A, b,  A_inv, Z, j, ep_states, rewards)
+            H_diag_gradient[cur_state] = (ct-1)/ct * H_diag_gradient[cur_state] + 1/ct * compute_hjj_gradient(Phi, lambda_, gamma, ep_states, j, A, b,  A_inv)
+        #grad = compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D, R)
+        # Replaced the above update with:
+        grad = utils.compute_lcv_lambda_gradient(eps, H_diag, ep_states, epsilon_lambda_gradient, H_diag_gradient)
+        
+        
         # if ep > 1000 :
         # new_lambda = lambda_ -  lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
         # print(new_lambda)
         # if new_lambda >= 0 and new_lambda <= 1:
         #   lambda_ = new_lambda
         #   print('current lambda:{0}'.format(lambda_))
-        grad = compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D, R)
+        
         # grad = compute_cv_gradient2(Phi, theta, gamma, lambda_, R, A, b, z)
         # adam_optimizer.update(grad, ep)
         # new_lambda = adam_optimizer.theta
