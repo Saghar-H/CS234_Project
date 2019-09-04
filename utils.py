@@ -22,7 +22,7 @@ def compute_A_inv_gradient(
 def compute_b_gradient(z_grad:np.ndarray, 
 						rewards:np.array
 						) -> np.array:
-	ret = 0
+	ret = 0_
 	sum_inner = 0
 	for i in range(z_grad.shape[0]):
 		sum_inner += z[i] * rewards[i]
@@ -35,7 +35,8 @@ def compute_z_gradient(_lambda, gamma, Phi, ep_states, j):
 	    result += (j-i)* (gamma ** (j-i)) * (_lambda ** (j-i-1)) * Phi[ep_states[i]]
     return result
 
-def compute_hjj_gradient(Phi, _lambda, gamma, ep_states, j, A, b,  A_inv, z, cur_state, next_state):
+def compute_hjj_gradient(Phi, _lambda, gamma, ep_states, j, A, b,  A_inv, z):
+    cur_state, next_state = ep_states[j], ep_states[j+1]
     z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, j)
     A_inv_grad = compute_A_inv_gradient(A, b, z, Phi)
     term1 = Phi[cur_state, :]-gamma* Phi[next_state, :]
@@ -46,7 +47,9 @@ def compute_hjj_gradient(Phi, _lambda, gamma, ep_states, j, A, b,  A_inv, z, cur
     return term3 + term5
 
 
-def compute_epsilon_lambda_gradient(Phi, gamma, A, b,  A_inv, z, z_grad, cur_state, next_state, rewards):
+def compute_epsilon_lambda_gradient(Phi, _lambda, gamma, A, b,  A_inv, z, j, ep_states, rewards):
+    cur_state, next_state = ep_states[j], ep_states[j+1]
+    z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, j)
     A_inv_grad = compute_A_inv_gradient(A, b, z, z_grad, Phi)
     b_grad = compute_b_gradient(z_grad, rewards)
     term1 = -(Phi[cur_state, :]-gamma* Phi[next_state, :])
