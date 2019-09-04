@@ -47,6 +47,12 @@ def compute_b_gradient(Z_grad:np.ndarray,
 
 	return sum_inner * 1.0 / (Z_grad.shape[1])
 
+def compute_eps_t(Phi, theta, gamma, reward, ep_states, j):
+    cur_state, next_state = ep_states[j], ep_states[j+1]
+    term1 = Phi[cur_state, :]-gamma* Phi[next_state, :]
+    eps_j = reward - term1 @ theta
+    return eps_j
+
 def compute_z(_lambda:float, 
 			  gamma:float, 
 			  Phi:np.ndarray, 
@@ -84,6 +90,16 @@ def compute_z_gradient(_lambda, gamma, Phi, ep_states, j):
     for i in range(j+1):
 	    result += (j-i)* (gamma ** (j-i)) * (_lambda ** (j-i-1)) * Phi[ep_states[i], :]
     return result
+
+
+def compute_hjj(Phi, _lambda, gamma, ep_states, j, A_inv):
+    cur_state, next_state = ep_states[j], ep_states[j+1]
+    z = compute_z(_lambda, Phi, ep_states, j)
+    term1 = Phi[cur_state, :]-gamma* Phi[next_state, :]
+    term2 = term1 @ A_inv
+    h_jj = term2 @ z
+    return h_jj
+
 
 def compute_hjj_gradient(Phi, _lambda, gamma, ep_states, j, A, b,  A_inv):
     '''
