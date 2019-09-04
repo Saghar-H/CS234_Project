@@ -20,7 +20,7 @@ num_episodes = 10000
 gamma = 0.9
 default_lambda = 0.5
 lr = 0.0001
-log_events = True
+log_events = False
 use_adaptive_lambda = True
 
 if log_events:
@@ -227,6 +227,9 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
             ep_rewards.append(reward)
             ep_states.append(cur_state)
         theta = adaptive_LSTD_lambda.theta
+        A = adaptive_LSTD_lambda.A
+        b = adaptive_LSTD_lambda.b
+        z = adaptive_LSTD_lambda.z
         # if ep > 1000 :
         # new_lambda = lambda_ -  lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
         # print(new_lambda)
@@ -286,14 +289,14 @@ def compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger=
             tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2
             loto_loss.append(tuple_loss)
             
-            if logger:
-                logger.log_scalar('average trajectories loss', loss, step)
-                logger.log_scalar('current tuple loto cv', tuple_loss, step)
-                logger.log_scalar('mean loto cv', np.mean(loto_loss), step)
-                logger.writer.flush()
-                step += 1
+            #if logger:
+            #    logger.log_scalar('average trajectories loss', loss, step)
+            #    logger.log_scalar('current tuple loto cv', tuple_loss, step)
+            #    logger.log_scalar('mean loto cv', np.mean(loto_loss), step)
+            #    logger.writer.flush()
+            #    step += 1
 
-                print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)))
+            #    print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)))
 
     cv_loss = np.mean(loto_loss)
     return cv_loss
@@ -421,7 +424,7 @@ P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 if use_adaptive_lambda:
     print('Running the Adaptive LSTD Lambda Algorithm ...')
     adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
-                                                                                              Phi, P, V, D, lr,
+                                                                                              Phi, P, V, D, R, lr,
                                                                                               gamma, default_lambda)
     selected_lambda = adaptive_lambda_val
     print('Adaptive Lambda Value: {0}'.format(selected_lambda))
