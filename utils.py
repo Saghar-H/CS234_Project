@@ -3,16 +3,16 @@ from pprint import pprint
 
 def compute_A_inv_gradient(
 						   A:np.ndarray, 
-						   z:np.ndarray, 
-						   z_grad:np.ndarray, 
-						   Phi:np.ndarray
+						   Z_grad:np.ndarray, 
+						   Phi:np.ndarray,
+						   ep_states: np.ndarray,
 						   ) -> np.ndarray:
 	'''
 	inputs: 
 	A: dxd
-	z: dxT
-	z_grad: dx1
-	Phi: Txd
+	Z_grad: dxT
+	Phi: sxd
+	ep_states: Tx1
 
 	return: 
 	gradient of A inverse: dxd
@@ -21,14 +21,14 @@ def compute_A_inv_gradient(
 	A_inv = np.linalg.pinv(A)
 	##Inner sum:
 	sum_inner = 0
-	for i in range(Phi.shape[0]-1):
-		sum_inner += z[:,i] @ (Phi[i,:]-Phi[i+1,:])
+	for i in range(ep_states.shape[0]-1):
+		sum_inner += Z_grad[:,i] @ (Phi[ep_states[i],:]-Phi[ep_states[i+1],:])
 
 	ret = -1 * A_inv @ (1.0 /(Phi.shape[0]-1) * sum_inner) @ A_inv
 
 	return ret
 
-def compute_b_gradient(z_grad:np.ndarray, 
+def compute_b_gradient(Z_grad:np.ndarray, 
 						rewards:np.array
 						) -> np.array:
 
