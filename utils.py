@@ -50,7 +50,7 @@ def compute_b_gradient(z_grad:np.ndarray,
 def compute_z_gradient(_lambda, gamma, Phi, ep_states, j):
     result = 0
     for i in range(j):
-	    result += (j-i)* (gamma ** (j-i)) * (_lambda ** (j-i-1)) * Phi[ep_states[i]]
+	    result += (j-i)* (gamma ** (j-i)) * (_lambda ** (j-i-1)) * Phi[ep_states[i], :]
     return result
 
 def compute_hjj_gradient(Phi, _lambda, gamma, ep_states, j, A, b,  A_inv, z, cur_state, next_state):
