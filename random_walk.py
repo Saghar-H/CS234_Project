@@ -237,7 +237,6 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
             ep_states.append(cur_state)
             z_t_gradient = utils.compute_z_gradient(lambda_, gamma, Phi, ep_states, timestep)
             z_gradient.append(z_t)
-            print(z_gradient)
         theta = adaptive_LSTD_lambda.theta
         # if ep > 1000 :
         # new_lambda = lambda_ -  lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
