@@ -54,6 +54,21 @@ def compute_z_gradient(_lambda, gamma, Phi, ep_states, j):
     return result
 
 def compute_hjj_gradient(Phi, _lambda, gamma, ep_states, j, A, b,  A_inv, z):
+    '''
+    inputs:
+    Phi: S X d
+    _lambda: 1 X 1
+    gamma : 1 X 1
+    ep_states: T X 1
+    j : 1 X 1
+    A: d X d
+    b: d X 1
+    A_inv: d X d
+    z: d X 1
+
+    return:
+    gradient of the H_jj wrt lambda : 1 X 1
+    '''
     cur_state, next_state = ep_states[j], ep_states[j+1]
     z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, j)
     A_inv_grad = compute_A_inv_gradient(A, b, z, Phi)
@@ -65,10 +80,25 @@ def compute_hjj_gradient(Phi, _lambda, gamma, ep_states, j, A, b,  A_inv, z):
     return term3 + term5
 
 
-def compute_epsilon_lambda_gradient(Phi, _lambda, gamma, A, b,  A_inv, z, j, ep_states, rewards):
+def compute_epsilon_lambda_gradient(Phi, _lambda, gamma, A, b,  A_inv, Z, j, ep_states, rewards):
+    '''
+    inputs:
+    Phi: S X d
+    _lambda: 1 X 1
+    gamma : 1 X 1
+    ep_states: T X 1
+    j : 1 X 1
+    A: d X d
+    b: d X 1
+    A_inv: d X d
+    Z: d X T 
+
+    return:
+    gradient of the eps_j wrt lambda : 1 X 1
+    '''
     cur_state, next_state = ep_states[j], ep_states[j+1]
     z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, j)
-    A_inv_grad = compute_A_inv_gradient(A, b, z, z_grad, Phi)
+    A_inv_grad = compute_A_inv_gradient(A, b, Z, z_grad, Phi)
     b_grad = compute_b_gradient(z_grad, rewards)
     term1 = -(Phi[cur_state, :]-gamma* Phi[next_state, :])
     term2 = A_inv_grad @ b
