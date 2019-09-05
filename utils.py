@@ -42,11 +42,11 @@ def compute_z_gradient(_lambda, gamma, Phi, ep_states, j):
 
 
 def compute_A_inv_gradient(
-                           _lambda, 
-                            gamma,
+                           _lambda:int, 
+                            gamma: int,
 						   A:np.ndarray, 
 						   Phi:np.ndarray,
-						   ep_states: np.ndarray,
+						   ep_states: list,
 						   ) -> np.ndarray:
 	'''
 	inputs: 
@@ -63,18 +63,17 @@ def compute_A_inv_gradient(
 	##Inner sum:
 	sum_inner = 0
 	for i in range(len(ep_states)-1):
-        z_grad =compute_z_gradient(_lambda, gamma, Phi, ep_states, i)
-        sum_inner += z_grad @ (Phi[ep_states[i],:]-Phi[ep_states[i+1],:])
-
+	    z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, i)
+	    sum_inner += z_grad @ (Phi[ep_states[i],:]-Phi[ep_states[i+1],:])
 	ret = -1 * A_inv @ (1.0 /(Phi.shape[0]-1) * sum_inner) @ A_inv
 
 	return ret
 
 def compute_b_gradient( 
-                        _lambda, 
-                        gamma, 
-                        Phi, 
-                        ep_states, 
+                        _lambda: int, 
+                        gamma: int, 
+                        Phi: np.ndarray, 
+                        ep_states: list, 
 						rewards:np.array
 						) -> np.array:
 
@@ -89,9 +88,8 @@ def compute_b_gradient(
 	ret = 0
 	sum_inner = 0
 	for i in range(len(ep_states)):
-        z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, i)
-		sum_inner += z_grad * rewards[i]
-
+            z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, i)
+            sum_inner += z_grad * rewards[i]
 	return sum_inner * 1.0 / (Phi.shape[0])
 
 def compute_eps_t(Phi, theta, gamma, reward, ep_states, j):
@@ -156,8 +154,8 @@ def compute_epsilon_lambda_gradient(Phi, _lambda, gamma, A, b,  A_inv, Z, j, ep_
     '''
     cur_state, next_state = ep_states[j], ep_states[j+1]
     z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, j)
-    A_inv_grad = compute_A_inv_gradient(A, b, z_grad, Phi)
-    b_grad = compute_b_gradient(z_grad, rewards)
+    A_inv_grad = compute_A_inv_gradient(_lambda, gamma, A, Phi, ep_states)
+    b_grad = compute_b_gradient(_lambda, gamma, Phi, ep_states, rewards)
     term1 = -(Phi[cur_state, :]-gamma* Phi[next_state, :])
     term2 = A_inv_grad @ b
     term3 = A_inv @ b_grad
