@@ -9,7 +9,8 @@ import utils
 from lstd import LSTD
 from pprint import pprint
 from adam import ADAM
-
+from autograd_cls import AutoGrad 
+ 
 ################  Parameters #################
 done = False
 seed = 1358
@@ -23,7 +24,7 @@ default_lambda = 0.5
 lr = 0.0001
 log_events = False
 use_adaptive_lambda = True
-
+compute_autograd = False
 if log_events:
     from tensorboard_utils import Logger
    
@@ -211,8 +212,10 @@ def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2, epsi
     return LSTD_lambda, theta, average_loss, G
 
 
-def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1, gamma=0.4, lambda_=0.2, epsilon=0.0):
+def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, Gs, lr=0.1, gamma=0.4, lambda_=0.2, epsilon=0.0):
     # LSTD operator:
+    Auto_grad = AutoGrad(compute_CV_loss, 4)
+    Auto_grad.gradient_fun()
     adaptive_LSTD_lambda = LSTD(num_features, epsilon=0.0)
     G = {}
     loss = []
@@ -261,8 +264,10 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
         #grad = compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D, R)
         # Replaced the above update with:
         grad = utils.compute_lcv_lambda_gradient(eps, H_diag, ep_states, epsilon_lambda_gradient, H_diag_gradient)
-        
-        
+        if compute_autograd:    
+            auto_grad = Auto_grad.loss_autograd_fun(trajectories, Phi, num_features, gamma, lambda_, Gs)
+            print('gradient diff:{0}'.format(abs(grad-auto_grad)))
+
         # if ep > 1000 :
         # new_lambda = lambda_ -  lr * compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D)
         # print(new_lambda)
@@ -276,7 +281,7 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
         new_lambda = lambda_ - lr * grad
         if new_lambda >= 0 and new_lambda <= 1:
             lambda_ = new_lambda
-            #print('current lambda:{0}'.format(lambda_))
+            print('current lambda:{0}'.format(lambda_))
         ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
         # print('ep_discounted:{0}'.format(ep_discountedrewards))
         if len(ep_discountedrewards) > 0:
@@ -361,7 +366,7 @@ def find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi, Gs, step_size
     gamma = 0.0
     while gamma < 1:
         #_, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr, gamma, lambda_=0.5, epsilon=0.0)
-        _, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr, gamma, lambda_=np.random.rand(), epsilon=0.0)
+        _, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, Gs, lr, lambda_=np.random.rand(), epsilon=0.0)
         gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])       
         gamma += step_size_gamma
     return np.array(gamma_lambda_loss)
@@ -458,7 +463,7 @@ P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 if use_adaptive_lambda:
     print('Running the Adaptive LSTD Lambda Algorithm ...')
     adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
-                                                                                              Phi, P, V, D, R, lr,
+                                                                                              Phi, P, V, D, R, Gs, lr,
                                                                                               gamma, default_lambda)
     selected_lambda = adaptive_lambda_val
     print('Adaptive Lambda Value: {0}'.format(selected_lambda))
@@ -468,7 +473,7 @@ else:
 
 print('Running the Adaptive LSTD Lambda Algorithm ...')
 adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
-                                                                                          Phi, P, V, D, R, lr,
+                                                                                          Phi, P, V, D, R, Gs, lr,
                                                                                          gamma, default_lambda)
 
 logger = None
