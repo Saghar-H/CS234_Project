@@ -257,7 +257,7 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr=0.1,
             H_diag[cur_state] = (ct-1)/ct * H_diag[cur_state] + 1/ct * utils.compute_hjj(Phi, lambda_, gamma, ep_states, timestep, A_inv)
             eps[cur_state] = (ct-1)/ct * eps[cur_state] + 1/ct * utils.compute_eps_t(Phi, theta, gamma, reward, ep_states, timestep)
             epsilon_lambda_gradient[cur_state] = (ct-1)/ct * epsilon_lambda_gradient[cur_state] + 1/ct * utils.compute_epsilon_lambda_gradient(Phi, lambda_, gamma,A, b,  A_inv, Z, timestep, ep_states, ep_rewards)
-            H_diag_gradient[cur_state] = (ct-1)/ct * H_diag_gradient[cur_state] + 1/ct * compute_hjj_gradient(Phi, lambda_, gamma, ep_states, timestep, A, b,  A_inv)
+            H_diag_gradient[cur_state] = (ct-1)/ct * H_diag_gradient[cur_state] + 1/ct * utils.compute_hjj_gradient(Phi, lambda_, gamma, ep_states, timestep, A, b,  A_inv)
         #grad = compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D, R)
         # Replaced the above update with:
         grad = utils.compute_lcv_lambda_gradient(eps, H_diag, ep_states, epsilon_lambda_gradient, H_diag_gradient)

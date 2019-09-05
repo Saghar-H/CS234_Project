@@ -58,13 +58,12 @@ def compute_A_inv_gradient(
 	return: 
 	gradient of A inverse: dxd
 	'''
-
 	A_inv = np.linalg.pinv(A)
 	##Inner sum:
 	sum_inner = 0
 	for i in range(len(ep_states)-1):
 	    z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, i)
-	    sum_inner += z_grad @ (Phi[ep_states[i],:]-Phi[ep_states[i+1],:])
+	    sum_inner += z_grad.reshape((10,1)) @ (Phi[ep_states[i],:]-Phi[ep_states[i+1],:]).reshape((1,10))
 	ret = -1 * A_inv @ (1.0 /(Phi.shape[0]-1) * sum_inner) @ A_inv
 
 	return ret
@@ -125,9 +124,9 @@ def compute_hjj_gradient(Phi, _lambda, gamma, ep_states, j, A, b,  A_inv):
     gradient of the H_jj wrt lambda : 1 X 1
     '''
     cur_state, next_state = ep_states[j], ep_states[j+1]
-    z = compute_z(_lambda, Phi, ep_states, j)
+    z = compute_z(_lambda,gamma,  Phi, ep_states, j)
     z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, j)
-    A_inv_grad = compute_A_inv_gradient(A, b, z_grad, Phi)
+    A_inv_grad = compute_A_inv_gradient(_lambda, gamma, A, Phi, ep_states)
     term1 = Phi[cur_state, :]-gamma* Phi[next_state, :]
     term2 = term1 @ A_inv
     term3 = term2 @ z_grad
@@ -167,6 +166,6 @@ def compute_lcv_lambda_gradient(epsilon, H, ep_states, epsilon_lambda_gradient, 
     T = len(ep_states)
     for t in range(T):
         s_t = ep_states[t]
-        I_H = 1 - H[s_t, s_t]
-    result += (2 * epsilon[t])/(I_H) * (epsilon_lambda_gradient[t] / I_H + (2*epsilon[t]*H_gradient[s_t,s_t]) / (I_H**2))
+        I_H = 1 - H[s_t]
+    result += (2 * epsilon[t])/(I_H) * (epsilon_lambda_gradient[t] / I_H + (2*epsilon[t]*H_gradient[s_t]) / (I_H**2))
     return result
