@@ -22,7 +22,7 @@ num_episodes = 10000
 gamma = 0.9
 default_lambda = 0.5
 lr = 0.0001
-log_events = False
+log_events = True
 use_adaptive_lambda = True
 compute_autograd = False
 if log_events:
@@ -314,7 +314,7 @@ def compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger=
     num_episodes = len(trajectories.keys())
     loto_loss = []
     step = 0
-    for i in range(num_episodes):
+    for i in range(min(1000,num_episodes)):
         traj = trajectories[i]
         if len(traj) <= 4:
             continue
@@ -471,10 +471,10 @@ else:
     print('Using default Lambda : {0}'.format(default_lambda))
     selected_lambda = default_lambda
 
-print('Running the Adaptive LSTD Lambda Algorithm ...')
-adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
-                                                                                          Phi, P, V, D, R, Gs, lr,
-                                                                                         gamma, default_lambda)
+# print('Running the Adaptive LSTD Lambda Algorithm ...')
+# adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(trajectories, num_features,
+#                                                                                           Phi, P, V, D, R, Gs, lr,
+#                                                                                          gamma, default_lambda)
 
 logger = None
 if log_events:
@@ -484,13 +484,13 @@ if log_events:
 
 cv_loss = compute_CV_loss(trajectories, Phi, num_features, gamma, selected_lambda, Gs, logger)
 
-print('Finding optimal lambda using LSTD Lambda Algorithm')
-result = find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi,Gs)
+#print('Finding optimal lambda using LSTD Lambda Algorithm')
+#result = find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi,Gs)
 #print('Gamma, Lambda, Loss')
 #print(result)
 #draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
 #result = find_optimal_lambda_grid_search(trajectories, Phi,Gs)
-print('Gamma, Lambda, Loss')
-print(result)
-draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
-draw_box_grid_search(trajectories, R)
+# print('Gamma, Lambda, Loss')
+# print(result)
+# draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
+# draw_box_grid_search(trajectories, R)
