@@ -167,5 +167,5 @@ def compute_lcv_lambda_gradient(epsilon, H, ep_states, epsilon_lambda_gradient, 
     for t in range(T):
         s_t = ep_states[t]
         I_H = 1 - H[s_t]
-    result += (2 * epsilon[t])/(I_H) * (epsilon_lambda_gradient[t] / I_H + (2*epsilon[t]*H_gradient[s_t]) / (I_H**2))
+    result += (2 * epsilon[s_t])/(I_H) * (epsilon_lambda_gradient[s_t] / I_H + (2*epsilon[s_t]*H_gradient[s_t]) / (I_H**2))
     return result
