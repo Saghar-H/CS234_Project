@@ -186,3 +186,135 @@ def compute_lcv_lambda_gradient(epsilon, H, ep_states, epsilon_lambda_gradient, 
         if result in {grad_clip_max_norm, -1 * grad_clip_max_norm}:
             print('Warning! norm hit:{0}'.format(result))
     return result
+
+
+def compute_CV_loss(trajectories, 
+                    Phi, 
+                    num_features, 
+                    gamma, 
+                    lambda_, 
+                    Gs, 
+                    logger=False,
+                    epsilon=0.0):
+    '''
+    :param trajectories:
+    :param num_features:
+    :param gamma:
+    :param epsilon:
+    :return:
+    '''
+    total_num_tuples = sum([len(traj) for traj in trajectories.values()])
+    num_episodes = len(trajectories.keys())
+    loto_loss = []
+    step = 0
+    for i in range(min(1000,num_episodes)):
+        traj = trajectories[i]
+        if len(traj) <= 4:
+            continue
+        for j in range(len(traj)):
+            # leave one tuple oto_trajectoriesout
+            loto_trajectories = copy.deepcopy(trajectories)
+            del loto_trajectories[i][j]
+            model, _, loss, _ = LSTD_algorithm(loto_trajectories, Phi, num_features, gamma, lambda_)
+            theta = model.theta
+            # pdb.set_trace()
+            tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2
+            loto_loss.append(tuple_loss)
+            
+            if logger:
+                logger.log_scalar('average trajectories loss', loss, step)
+                logger.log_scalar('current tuple loto cv', tuple_loss, step)
+                logger.log_scalar('mean loto cv', np.mean(loto_loss), step)
+                logger.writer.flush()
+                step += 1
+
+                print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)))
+
+    cv_loss = np.mean(loto_loss)
+    return cv_loss
+
+def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D, R):
+    #print('****rewards*****')
+    #print(V)
+    #print(R)
+    I = np.eye(len(P), len(P[0]))
+    phi_t = phi.transpose()
+    #V_t = V.transpose()
+    R_t = R.transpose()
+    I_gamma_P = I - gamma * P
+    # print('*****---- P ----*****')
+    # print(P)
+    inv1 = np.linalg.pinv(I - gamma * lstd_lambda * P)
+    #psi = phi_t @ D @ inv1 @ I_gamma_P
+    psi = phi_t @ D @ inv1
+    # print('*****---- psi ----*****')
+    # print(psi)
+    inv2 = np.linalg.pinv(psi @ phi)
+    H = phi @ inv2 @ psi
+    I_H = I - H
+    d = np.diag(np.diag(I_H))
+    # print('*****----H----*****')
+    # print(H)
+    # print('*****----diag(I-H)----*****')
+    # print(d)
+    d_inv1 = np.linalg.pinv(d)
+    # print('*****----(diag(I-H))^(-1)----*****')
+    # print(d_inv1)
+    d_inv2 = np.linalg.pinv(d_inv1)
+    # print('*****----(diag(I-H))^(-2)----*****')
+    # print(d_inv2)
+    psi_gradient = gamma * phi_t @ D @ inv1 @ P @ inv1 @ I_gamma_P
+    H_gradient = phi @ inv2 @ (psi_gradient - psi_gradient @ phi @ inv2 @ psi)
+    diag_H_gradient = np.diag(np.diag(H_gradient))
+    d_inv2_gradient = d_inv1 @ (diag_H_gradient @ d_inv1 + d_inv1 @ diag_H_gradient) @ d_inv1
+    #d_inv2_gradient = 2 * d_inv1 @ diag_H_gradient @ d_inv2
+    #print('-------')
+    #print(d_inv1 @ (diag_H_gradient @ d_inv1 + d_inv1 @ diag_H_gradient) @ d_inv1)
+    #print(d_inv2_gradient)
+    # print('*****---- H_gradient ----*****')
+    # print(H_gradient)
+    #H_V = phi @ theta
+    term1 = -R_t @ H_gradient @ d_inv2 @ I_H @ R
+    term2 = R_t @ I_H @ d_inv2_gradient @ I_H @ R
+    term3 = -R_t @ I_H @ d_inv2 @ H_gradient @ R
+    cv_gradient = term1 + term2 + term3
+    # print("#### CV Gradient #####")
+    # print(cv_gradient)
+    return cv_gradient
+
+
+def get_discounted_return(episode_rewards, gamma):
+    discounted_rewards = [0] * (len(episode_rewards) + 1)
+    for i in range(len(episode_rewards) - 1, -1, -1):
+        discounted_rewards[i] = discounted_rewards[i + 1] * gamma + episode_rewards[i]
+    return discounted_rewards[:-1]
+
+
+def compute_P(transition_probs, num_actions, num_states):
+    ret = np.zeros((num_states, num_states))
+    for s in transition_probs.keys():
+        for a in transition_probs[s]:
+            for tup in transition_probs[s][a]:
+                sp = tup[1]
+                p_sasp = tup[0]
+                ret[s, sp] += 1.0 / num_actions * p_sasp
+    return ret
+
+def calculate_batch_loss(trajectories, G, theta, Phi):
+    '''
+    :param theta: Value function parameter such that V= Phi * Theta
+    :param trajectories: dictionary of episodes trajectories: {ep0 : [(state, reward, state_next, done), ...]}
+    :param G: dictionary of episodes return values: {ep0 : [g0, g1, ... ]}
+    :return: list of episodes loss, average over episodes's loss
+    '''
+    num_episodes = len(trajectories.keys())
+    loss = []
+    for ep in range(num_episodes):
+        traj = trajectories[ep]
+        if len(traj) <= 4 or len(G[ep]) <= 0:
+            continue
+        ep_loss = np.mean(
+            [(np.dot(Phi[traj[t][0], :], theta) - G[ep][t]) ** 2 for t in range(len(traj))])
+        loss.append(ep_loss)
+    avg_loss = np.mean(loss)
+    return loss, avg_loss

@@ -20,19 +20,16 @@ class LSTD:
       reward over a trajectory.
   """
 
-    def __init__(self, n, epsilon=0):
+    def __init__(self, n):
         """Initialize the learning algorithm.
 
     Parameters
     -----------
     n : int
         The number of features
-    epsilon : float
-        To avoid having the `A` matrix be singular, it is sometimes helpful
-        to initialize it with the identity matrix multiplied by `epsilon`.
     """
         self.n = n
-        self.A = np.eye(self.n) * epsilon
+        self.A = np.zeros((self.n, self.n))
         self.b = np.zeros(self.n)
         self.reset()
 
