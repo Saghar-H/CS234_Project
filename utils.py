@@ -47,6 +47,7 @@ def compute_A_inv_gradient(
 						   A:np.ndarray, 
 						   Phi:np.ndarray,
 						   ep_states: list,
+                           A_inv:np.ndarray,
 						   ) -> np.ndarray:
 	'''
 	inputs: 
@@ -54,11 +55,11 @@ def compute_A_inv_gradient(
 	Z_grad: dxT
 	Phi: sxd
 	ep_states: Tx1
+	A_inv: dxd
 
 	return: 
 	gradient of A inverse: dxd
 	'''
-	A_inv = np.linalg.pinv(A)
 	##Inner sum:
 	sum_inner = 0
 	for i in range(len(ep_states)-1):
@@ -126,7 +127,7 @@ def compute_hjj_gradient(Phi, _lambda, gamma, ep_states, j, A, b,  A_inv):
     cur_state, next_state = ep_states[j], ep_states[j+1]
     z = compute_z(_lambda,gamma,  Phi, ep_states, j)
     z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, j)
-    A_inv_grad = compute_A_inv_gradient(_lambda, gamma, A, Phi, ep_states)
+    A_inv_grad = compute_A_inv_gradient(_lambda, gamma, A, Phi, ep_states, A_inv)
     term1 = Phi[cur_state, :]-gamma* Phi[next_state, :]
     term2 = term1 @ A_inv
     term3 = term2 @ z_grad
@@ -153,7 +154,7 @@ def compute_epsilon_lambda_gradient(Phi, _lambda, gamma, A, b,  A_inv, Z, j, ep_
     '''
     cur_state, next_state = ep_states[j], ep_states[j+1]
     z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, j)
-    A_inv_grad = compute_A_inv_gradient(_lambda, gamma, A, Phi, ep_states)
+    A_inv_grad = compute_A_inv_gradient(_lambda, gamma, A, Phi, ep_states, A_inv)
     b_grad = compute_b_gradient(_lambda, gamma, Phi, ep_states, rewards)
     term1 = -(Phi[cur_state, :]-gamma* Phi[next_state, :])
     term2 = A_inv_grad @ b
@@ -161,11 +162,27 @@ def compute_epsilon_lambda_gradient(Phi, _lambda, gamma, A, b,  A_inv, Z, j, ep_
     term4 = term1 @ (term2 + term3)
     return term4
 
-def compute_lcv_lambda_gradient(epsilon, H, ep_states, epsilon_lambda_gradient, H_gradient):
+def compute_lcv_lambda_gradient(epsilon, H, ep_states, epsilon_lambda_gradient, H_gradient, grad_clip_max_norm=0):
+    '''
+    inputs:
+    epsilon: #episodes in trajectory  x 1
+    H: SxS
+    ep_states: #episodes in trajectory  x 1
+    epsilon_lambda_gradient: #episodes in trajectory x 1
+    H_gradient: SxS
+    grad_clip_max_norm: 1x1
+
+    return:
+    gradient of lcv vs lambda : float
+    '''
     result = 0
     T = len(ep_states)
     for t in range(T-1):
         s_t = ep_states[t]
         I_H = 1 - H[s_t]
-    result += (2 * epsilon[s_t])/(I_H) * (epsilon_lambda_gradient[s_t] / I_H + (2*epsilon[s_t]*H_gradient[s_t]) / (I_H**2))
+        result += (2 * epsilon[s_t])/(I_H) * (epsilon_lambda_gradient[s_t] / I_H + (2*epsilon[s_t]*H_gradient[s_t]) / (I_H**2))
+    if grad_clip_max_norm:
+        result = min(result, grad_clip_max_norm) if result > 0 else max(result, -1 * grad_clip_max_norm)
+        if result in {grad_clip_max_norm, -1 * grad_clip_max_norm}:
+            print('Warning! norm hit:{0}'.format(result))
     return result

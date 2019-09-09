@@ -10,21 +10,22 @@ from lstd import LSTD
 from pprint import pprint
 from adam import ADAM
 from autograd_cls import AutoGrad 
- 
+import pudb
 ################  Parameters #################
 done = False
-seed = 1358
+seed = 1356
 env_name = 'WalkFiveStates-v0'
 num_features = 10
 num_states = 5
 num_episodes = 10000
-
+A_inv_epsilon = 1e-3
 gamma = 0.9
-default_lambda = 0.5
-lr = 0.0001
+default_lambda = 0.8
+lr = 0.01
 log_events = True
 use_adaptive_lambda = True
 compute_autograd = False
+grad_clip_norm = 1000
 if log_events:
     from tensorboard_utils import Logger
    
@@ -125,14 +126,6 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D, R):
     # print("#### CV Gradient #####")
     # print(cv_gradient)
     return cv_gradient
-
-#def compute_cv_gradient2(Phi, theta, gamma, lambda_, R, A, b, z)
-#    A_inv_lambda_gradient = utils.compute_A_inv_gradient(A, b, z, Phi)
-#    b_lambda_gradient = utils.compute_b_grandient(b)
-#    z_lambda_gradient = compute_z_gradient()
-#    hjj_lambda_gradient = compute_hjj_gradient()
-#    epsilon_lambda_gradient = compute_epsilon_lambda_gradient()
-#    lcv_h_gradient = compute_lcv_h_gradient()
 
 def run_env_episodes(num_episodes):
     D = np.ones(env.observation_space.n) * 1e-10
@@ -249,7 +242,7 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, Gs, lr=
         theta = adaptive_LSTD_lambda.theta
         A = adaptive_LSTD_lambda.A
         b = adaptive_LSTD_lambda.b
-        A_inv = np.linalg.pinv(A)
+        A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * A_inv_epsilon)
         for timestep in range(len(traj)-1):
             cur_state, reward, next_state, done = traj[timestep]
             # To-do : change the following update to running average
@@ -263,7 +256,12 @@ def Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, Gs, lr=
             H_diag_gradient[cur_state] = (ct-1)/ct * H_diag_gradient[cur_state] + 1/ct * utils.compute_hjj_gradient(Phi, lambda_, gamma, ep_states, timestep, A, b,  A_inv)
         #grad = compute_cv_gradient(Phi, theta, gamma, lambda_, P, V, D, R)
         # Replaced the above update with:
-        grad = utils.compute_lcv_lambda_gradient(eps, H_diag, ep_states, epsilon_lambda_gradient, H_diag_gradient)
+        grad = utils.compute_lcv_lambda_gradient(eps, 
+                                                 H_diag, 
+                                                 ep_states, 
+                                                 epsilon_lambda_gradient, 
+                                                 H_diag_gradient,
+                                                 grad_clip_max_norm = grad_clip_norm)
         if compute_autograd:    
             auto_grad = Auto_grad.loss_autograd_fun(trajectories, Phi, num_features, gamma, lambda_, Gs)
             print('gradient diff:{0}'.format(abs(grad-auto_grad)))
