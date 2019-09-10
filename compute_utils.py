@@ -187,52 +187,6 @@ def compute_lcv_lambda_gradient(epsilon, H, ep_states, epsilon_lambda_gradient, 
             print('Warning! norm hit:{0}'.format(result))
     return result
 
-
-def compute_CV_loss(trajectories, 
-                    Phi, 
-                    num_features, 
-                    gamma, 
-                    lambda_, 
-                    Gs, 
-                    logger=False,
-                    epsilon=0.0):
-    '''
-    :param trajectories:
-    :param num_features:
-    :param gamma:
-    :param epsilon:
-    :return:
-    '''
-    total_num_tuples = sum([len(traj) for traj in trajectories.values()])
-    num_episodes = len(trajectories.keys())
-    loto_loss = []
-    step = 0
-    for i in range(min(1000,num_episodes)):
-        traj = trajectories[i]
-        if len(traj) <= 4:
-            continue
-        for j in range(len(traj)):
-            # leave one tuple oto_trajectoriesout
-            loto_trajectories = copy.deepcopy(trajectories)
-            del loto_trajectories[i][j]
-            model, _, loss, _ = LSTD_algorithm(loto_trajectories, Phi, num_features, gamma, lambda_)
-            theta = model.theta
-            # pdb.set_trace()
-            tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2
-            loto_loss.append(tuple_loss)
-            
-            if logger:
-                logger.log_scalar('average trajectories loss', loss, step)
-                logger.log_scalar('current tuple loto cv', tuple_loss, step)
-                logger.log_scalar('mean loto cv', np.mean(loto_loss), step)
-                logger.writer.flush()
-                step += 1
-
-                print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)))
-
-    cv_loss = np.mean(loto_loss)
-    return cv_loss
-
 def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D, R):
     #print('****rewards*****')
     #print(V)
