@@ -13,7 +13,7 @@ from Config import Config
 #import pudb
 ################  Parameters #################
 done = False
-log_events = True
+log_events = False
 
 if log_events:
     from tensorboard_utils import Logger
@@ -26,12 +26,13 @@ config = Config(
     num_episodes = 10000,
     A_inv_epsilon = 1e-4,
     gamma = 0.5,
-    default_lambda = 0.01,
+    default_lambda = 0.75,
     lr = 0.01,
     use_adaptive_lambda = True,
     grad_clip_norm = 10,
     compute_autograd = False,
-    batch_size = 8,
+    use_adam_optimizer = True,
+    batch_size = 4,
 )
 
 ##########################################################
