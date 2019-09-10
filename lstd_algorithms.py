@@ -5,6 +5,8 @@ from lstd import LSTD
 from adam import ADAM
 import copy
 import pudb
+import pdb 
+
 
 def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
     # LSTD operator:
@@ -148,9 +150,12 @@ def Adaptive_LSTD_algorithm(trajectories,
         #   print('current lambda:{0}'.format(lambda_))
         
         # grad = compute_cv_gradient2(Phi, theta, gamma, lambda_, R, A, b, z)
-        # adam_optimizer.update(grad, ep)
-        # new_lambda = adam_optimizer.theta
-        new_lambda = lambda_ - config.lr * grad
+        
+        if config.use_adam_optimizer:
+            adam_optimizer.update(grad, ep)
+            new_lambda = adam_optimizer.x
+        else:
+            new_lambda = lambda_ - config.lr * grad
         if new_lambda >= 0 and new_lambda <= 1:
             lambda_ = new_lambda
             print('current lambda:{0}'.format(lambda_))
@@ -183,6 +188,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
                                     config
                                  ):
     # LSTD operator:
+
     Auto_grad = AutoGrad(compute_CV_loss, 4)
     Auto_grad.gradient_fun()
     adaptive_LSTD_lambda = LSTD(config.num_features)
@@ -214,7 +220,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
         
         cur_state = traj[0][0]
         adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
-               
+
         for timestep in range(len(traj)):
 
             cur_state, reward, next_state, done = traj[timestep]
@@ -274,8 +280,14 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
             if config.compute_autograd:    
                 auto_grad = Auto_grad.loss_autograd_fun(trajectories, Phi, config.num_features, config.gamma, lambda_, Gs)
                 print('gradient diff:{0}'.format(abs(grad-auto_grad)))
-            #pudb.set_trace()
-            new_lambda = lambda_ - config.lr * grad
+
+            if config.use_adam_optimizer:
+                adam_optimizer.x = lambda_
+                adam_optimizer.update(grad, ep)
+                new_lambda = adam_optimizer.x
+            else:
+                new_lambda = lambda_ - config.lr * grad
+            
             if new_lambda >= 0 and new_lambda <= 1:
                 lambda_ = new_lambda
                 print('current lambda:{0}'.format(lambda_))

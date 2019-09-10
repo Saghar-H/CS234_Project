@@ -1,6 +1,7 @@
 import numpy as np
 import pdb
 from pprint import pprint
+import copy 
 
 def compute_z(_lambda:float, 
 			  gamma:float, 
