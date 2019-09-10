@@ -7,7 +7,7 @@ import copy
 import matplotlib.pyplot as plt
 from pprint import pprint
 from grid_search_utils import find_optimal_lambda_grid_search, find_adaptive_optimal_lambda_grid_search, draw_optimal_lambda_grid_search, draw_box_grid_search
-from lstd_algorithms import LSTD_algorithm, Adaptive_LSTD_algorithm
+from lstd_algorithms import LSTD_algorithm, Adaptive_LSTD_algorithm, Adaptive_LSTD_algorithm_batch
 from compute_utils import get_discounted_return, compute_P
 from Config import Config
 #import pudb
@@ -19,18 +19,19 @@ if log_events:
     from tensorboard_utils import Logger
         
 config = Config(
-    seed = 1355,
+    seed = 1356,
     env_name = 'WalkFiveStates-v0',
     num_features = 10,
     num_states = 5,
     num_episodes = 10000,
-    A_inv_epsilon = 1e-3 ,
-    gamma = 0.9,
-    default_lambda = 0.8,
+    A_inv_epsilon = 1e-4,
+    gamma = 0.5,
+    default_lambda = 0.01,
     lr = 0.01,
     use_adaptive_lambda = True,
-    grad_clip_norm = 1000,
+    grad_clip_norm = 10,
     compute_autograd = False,
+    batch_size = 8,
 )
 
 ##########################################################
@@ -118,7 +119,7 @@ P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 
 if config.use_adaptive_lambda:
     print('Running the Adaptive LSTD Lambda Algorithm ...')
-    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm(
+    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm_batch(
                                                                                                                     trajectories, 
                                                                                                                     Phi, 
                                                                                                                     P, 
