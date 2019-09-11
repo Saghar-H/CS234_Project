@@ -1,5 +1,6 @@
 import gym
-import gym_walk
+#import gym_walk
+from boyan_exp import BOYAN_MDP
 import pdb
 import numpy as np
 import random
@@ -19,25 +20,30 @@ if log_events:
         
 config = Config(
     seed = 1356,
-    env_name = 'WalkFiveStates-v0',
-    num_features = 10,
-    num_states = 5,
+    #env_name = 'WalkFiveStates-v0',
+    env_name = 'Boyan',
+    num_features = 4,
+    num_states = 13,
     num_episodes = 10000,
     A_inv_epsilon = 1e-3,
     gamma = 0.5,
-    default_lambda = 0.3,
-    lr = .35,
+    default_lambda = 0.75,
+    lr = .001,
     use_adaptive_lambda = True,
     grad_clip_norm = 10,
     compute_autograd = False,
     use_adam_optimizer = True,
-    batch_size = 8,
+    batch_size = 1,
 )
 
 ##########################################################
 
 def init_env(env_name, seed):
-    env = gym.make(env_name)
+    if env_name == 'WalkFiveStates-v0':
+        env = gym.make(env_name)
+    else:
+        boyan_mdp = BOYAN_MDP('boyan_mdp.png')
+        env = boyan_mdp.env
     env.reset()
     random.seed(seed)
     env.seed(seed)
@@ -81,8 +87,10 @@ def run_env_episodes(num_episodes):
     return np.diag(D / total_steps), V / D, trajectories, Gs, R/D
 
 env = init_env(config.env_name, config.seed)
-
-transition_probs = env.env.P
+if config.env_name == 'WalkFiveStates-v0':
+    transition_probs = env.env.P
+else:
+    transition_probs = env.transitions
 print("###############Transition Probabilities####################")
 print(transition_probs)
 print('Generate Monte Carlo Estimates of D and V...')
@@ -96,8 +104,22 @@ Phi = np.random.rand(config.num_states, config.num_features)
 Now compute the MRP value of P: P(s'|s)
 '''
 
-
-P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
+if config.env_name == 'WalkFiveStates-v0':
+    P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
+else:
+    transitions = transition_probs
+    boyan_mdp = BOYAN_MDP('boyan_mdp.png')
+    mdp_spec = boyan_mdp.spec
+    P = np.zeros(shape=(env.observation_space.n, env.observation_space.n))
+    expected_rewards = np.zeros(shape=(env.observation_space.n, env.action_space.n,))
+    for (state, action), choices in transitions.next_states.items():
+        for next_state, prob in choices.items():
+            P[state.index, next_state.index] = prob
+    for state in mdp_spec.states:
+        if state.terminal_state:
+            P[state.index, state.index] = 1.
+    for (state, action), choices in transitions.rewards.items():
+            expected_rewards[state.index, action.index] = sum(value * prob for value, prob in choices.items())
 
 # Run LSTD_lambda algorithm:
 # print('Running the LSTD Lambda Algorithm ...')

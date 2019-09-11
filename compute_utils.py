@@ -3,6 +3,7 @@ import pdb
 from pprint import pprint
 import copy 
 
+
 def compute_z(_lambda:float, 
 			  gamma:float, 
 			  Phi:np.ndarray, 
@@ -61,11 +62,12 @@ def compute_A_inv_gradient(
 	return: 
 	gradient of A inverse: dxd
 	'''
+	num_features = Phi.shape[1]
 	##Inner sum:
 	sum_inner = 0
 	for i in range(len(ep_states)-1):
 	    z_grad = compute_z_gradient(_lambda, gamma, Phi, ep_states, i)
-	    sum_inner += z_grad.reshape((10,1)) @ (Phi[ep_states[i],:]-Phi[ep_states[i+1],:]).reshape((1,10))
+	    sum_inner += z_grad.reshape((num_features,1)) @ (Phi[ep_states[i],:]-Phi[ep_states[i+1],:]).reshape((1,num_features))
 	ret = -1 * A_inv @ (1.0 /(Phi.shape[0]-1) * sum_inner) @ A_inv
 
 	return ret
