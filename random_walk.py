@@ -116,6 +116,12 @@ P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 #cv_loss = compute_CV_loss(trajectories, Phi, num_features, gamma, adaptive_lambda_val, Gs, logger)
 
 #print('Finding optimal lambda using LSTD Lambda Algorithm')
+logger = None
+if log_events:
+    import os
+    path = os.path.dirname(os.path.abspath(__file__))
+    logger_name = 'Adaptive lambda Algorithm_Gamma_{0:.3}'.format(config.gamma)
+    logger = Logger(path + '/temp/logs/train', logger_name)
 
 if config.use_adaptive_lambda:
     print('Running the Adaptive LSTD Lambda Algorithm ...')
@@ -127,6 +133,7 @@ if config.use_adaptive_lambda:
                                                                                                                     D, 
                                                                                                                     R, 
                                                                                                                     Gs, 
+                                                                                                                    logger,
                                                                                                                     config
                                                                                                                     )
     selected_lambda = adaptive_lambda_val
@@ -137,8 +144,10 @@ else:
 
 logger = None
 if log_events:
+    import os
+    path = os.path.dirname(os.path.abspath(__file__))
     logger_name = 'Adaptive lambda_{0:.3}_Gamma_{1:.3}'.format(selected_lambda, config.gamma)
-    logger = Logger('/Users/siamak/temp/logs/test', logger_name)
+    logger = Logger(path + '/temp/logs/test', logger_name)
 
 
 cv_loss = compute_CV_loss(trajectories, Phi, config.num_features, config.gamma, selected_lambda, Gs, logger)
