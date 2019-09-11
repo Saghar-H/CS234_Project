@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 from pprint import pprint
 from grid_search_utils import find_optimal_lambda_grid_search, find_adaptive_optimal_lambda_grid_search, draw_optimal_lambda_grid_search, draw_box_grid_search
 from lstd_algorithms import LSTD_algorithm, Adaptive_LSTD_algorithm, Adaptive_LSTD_algorithm_batch, Adaptive_LSTD_algorithm_batch_type2, compute_CV_loss
-from compute_utils import get_discounted_return, compute_P
+from compute_utils import get_discounted_return, compute_P, upsample_trajectories
 from Config import Config
-#import pudb
+
 ################  Parameters #################
 done = False
 log_events = True
@@ -32,6 +32,7 @@ config = Config(
     compute_autograd = False,
     use_adam_optimizer = True,
     batch_size = 8,
+    upsampling_rate = 10,
 )
 
 ##########################################################
@@ -48,11 +49,11 @@ def run_env_episodes(num_episodes):
     D = np.ones(env.observation_space.n) * 1e-10
     V = np.zeros(env.observation_space.n)
     R = np.zeros(env.observation_space.n)
-    trajectories = {}
-    Gs = {}
+    trajectories = []
+    Gs = []
     total_steps = 0
     for ep in range(num_episodes):
-        trajectories[ep] = []
+        trajectories.append([])
         cur_state = env.reset()
         done = False
         ep_rewards = []
@@ -68,7 +69,7 @@ def run_env_episodes(num_episodes):
             cur_state = next_state
 
         ep_discountedrewards = get_discounted_return(ep_rewards, config.gamma)
-        Gs[ep] = ep_discountedrewards
+        Gs.append(ep_discountedrewards)
 
         for i in range(len(ep_states)):
             V[ep_states[i]] += ep_discountedrewards[i]
@@ -88,6 +89,9 @@ print(transition_probs)
 print('Generate Monte Carlo Estimates of D and V...')
 D, V, trajectories, Gs, R = run_env_episodes(config.num_episodes)
 print('Done finding D and V!')
+##Upsample 1's:
+#upsampled_Gs, upsampled_trajectories = upsample_trajectories(Gs, trajectories, config.upsampling_rate)
+
 Phi = np.random.rand(config.num_states, config.num_features)
 # D = np.diag([0.12443139 ,0.24981192 ,0.25088312, 0.25018808 ,0.12468549])
 # V = np.array([0, 0.01776151, 0.071083, 0.26708894 ,1])

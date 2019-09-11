@@ -4,9 +4,6 @@ from compute_utils import compute_lcv_lambda_gradient, compute_epsilon_lambda_gr
 from lstd import LSTD
 from adam import ADAM
 import copy
-import pudb
-import pdb 
-
 
 def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
     # LSTD operator:
@@ -195,7 +192,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
     G = {}
     loss = []
     running_loss = []
-    num_episodes = len(trajectories.keys())
+    num_episodes = len(trajectories)
     adam_optimizer = ADAM(x_init = config.default_lambda, alpha=config.lr)
     lambda_ = config.default_lambda
     
@@ -338,17 +335,15 @@ def Adaptive_LSTD_algorithm_batch_type2(trajectories,
     G = {}
     loss = []
     running_loss = []
-    num_episodes = len(trajectories.keys())
+    num_episodes = len(trajectories)
     adam_optimizer = ADAM(x_init = config.default_lambda, alpha=config.lr)
     lambda_ = config.default_lambda
-    
     ##### First go over all the trajectories and calculate estimate A and b:
     for ep in range(config.num_episodes):
         traj = trajectories[ep]
         if len(traj) <= 4:
             continue 
         cur_state = traj[0][0]
-			
         adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
         for timestep in range(len(traj)):
             cur_state, reward, next_state, done = traj[timestep]

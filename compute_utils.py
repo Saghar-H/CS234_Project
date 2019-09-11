@@ -2,6 +2,7 @@ import numpy as np
 import pdb
 from pprint import pprint
 import copy 
+from random import shuffle
 
 def compute_z(_lambda:float, 
 			  gamma:float, 
@@ -273,3 +274,43 @@ def calculate_batch_loss(trajectories, G, theta, Phi):
         loss.append(ep_loss)
     avg_loss = np.mean(loss)
     return loss, avg_loss
+
+
+def upsample_trajectories(G, trajectories, upsample_rate):
+    '''
+    inputs:
+    G: discounted rewards
+    trajectories: All the input trajectories
+    upsample_rate: increase the 1 samples by this ratio
+    return:
+    upsampled_G
+    upsampled_trajectories
+    '''
+    
+    #first find the ones with rewards 1:
+    ones = []
+    G_ones = []
+    trajectories_ones = []
+    
+    for i in range(len(G)):
+        if sum(G[i]) > 0 and len(G[i]) > 4:
+            G_ones.append(G[i])
+            trajectories_ones.append(trajectories[i])
+    
+    #now upsample the ones:
+    G_ones_upsampled = []
+    trajectories_ones_upsampled = []
+    for _ in range(upsample_rate):
+        G_ones_upsampled += G_ones
+        trajectories_ones_upsampled += trajectories_ones
+        
+    all_Gs = G + G_ones_upsampled
+    all_trajectories = trajectories + trajectories_ones_upsampled
+    
+    #Now shuffle them:
+    indices = [i for i in range(len(all_Gs))]
+    shuffle(indices)
+    
+    all_Gs_shuffled = [all_Gs[i] for i in indices]
+    all_trajectories_shuffled = [all_trajectories[i] for i in indices]
+    return all_Gs_shuffled, all_trajectories_shuffled
