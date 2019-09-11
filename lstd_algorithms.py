@@ -150,7 +150,6 @@ def Adaptive_LSTD_algorithm(trajectories,
         #   print('current lambda:{0}'.format(lambda_))
         
         # grad = compute_cv_gradient2(Phi, theta, gamma, lambda_, R, A, b, z)
-        
         if config.use_adam_optimizer:
             adam_optimizer.update(grad, ep)
             new_lambda = adam_optimizer.x
@@ -347,7 +346,10 @@ def Adaptive_LSTD_algorithm_batch_type2(trajectories,
     for ep in range(config.num_episodes):
         traj = trajectories[ep]
         if len(traj) <= 4:
-            continue           
+            continue 
+        cur_state = traj[0][0]
+			
+        adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
         for timestep in range(len(traj)):
             cur_state, reward, next_state, done = traj[timestep]
             adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], 
@@ -452,7 +454,7 @@ def Adaptive_LSTD_algorithm_batch_type2(trajectories,
                 new_lambda = adam_optimizer.x
             else:
                 new_lambda = lambda_ - config.lr * grad
-            #pdb.set_trace()
+            #pudb.set_trace()
             if new_lambda >= 0 and new_lambda <= 1:
                 lambda_ = new_lambda
                 print('gradient: {0}'.format(grad))

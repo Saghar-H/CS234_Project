@@ -25,8 +25,8 @@ config = Config(
     num_episodes = 10000,
     A_inv_epsilon = 1e-3,
     gamma = 0.5,
-    default_lambda = 0.3,
-    lr = .35,
+    default_lambda = 0.5,
+    lr = .01,
     use_adaptive_lambda = True,
     grad_clip_norm = 10,
     compute_autograd = False,
@@ -125,7 +125,7 @@ if log_events:
 
 if config.use_adaptive_lambda:
     print('Running the Adaptive LSTD Lambda Algorithm ...')
-    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm_batch_type2(
+    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm_batch(
                                                                                                                     trajectories, 
                                                                                                                     Phi, 
                                                                                                                     P, 
