@@ -33,7 +33,8 @@ config = Config(
     grad_clip_norm = 10,
     compute_autograd = False,
     use_adam_optimizer = True,
-    batch_size = 1,
+    batch_size = 8,
+    upsampling_rate = 10,
 )
 
 ##########################################################
@@ -54,11 +55,11 @@ def run_env_episodes(num_episodes):
     D = np.ones(env.observation_space.n) * 1e-10
     V = np.zeros(env.observation_space.n)
     R = np.zeros(env.observation_space.n)
-    trajectories = {}
-    Gs = {}
+    trajectories = []
+    Gs = []
     total_steps = 0
     for ep in range(num_episodes):
-        trajectories[ep] = []
+        trajectories.append([])
         cur_state = env.reset()
         done = False
         ep_rewards = []
@@ -74,7 +75,7 @@ def run_env_episodes(num_episodes):
             cur_state = next_state
 
         ep_discountedrewards = get_discounted_return(ep_rewards, config.gamma)
-        Gs[ep] = ep_discountedrewards
+        Gs.append(ep_discountedrewards)
 
         for i in range(len(ep_states)):
             V[ep_states[i]] += ep_discountedrewards[i]
@@ -96,6 +97,9 @@ print(transition_probs)
 print('Generate Monte Carlo Estimates of D and V...')
 D, V, trajectories, Gs, R = run_env_episodes(config.num_episodes)
 print('Done finding D and V!')
+##Upsample 1's:
+#upsampled_Gs, upsampled_trajectories = upsample_trajectories(Gs, trajectories, config.upsampling_rate)
+
 Phi = np.random.rand(config.num_states, config.num_features)
 # D = np.diag([0.12443139 ,0.24981192 ,0.25088312, 0.25018808 ,0.12468549])
 # V = np.array([0, 0.01776151, 0.071083, 0.26708894 ,1])
@@ -147,7 +151,7 @@ if log_events:
 
 if config.use_adaptive_lambda:
     print('Running the Adaptive LSTD Lambda Algorithm ...')
-    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm_batch_type2(
+    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm_batch(
                                                                                                                     trajectories, 
                                                                                                                     Phi, 
                                                                                                                     P, 
