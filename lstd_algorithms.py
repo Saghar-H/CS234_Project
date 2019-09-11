@@ -295,7 +295,6 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
                 new_lambda = adam_optimizer.x
             else:
                 new_lambda = lambda_ - config.lr * grad
-            
             if new_lambda >= 0 and new_lambda <= 1:
                 lambda_ = new_lambda
                 print('gradient: {0}'.format(grad))
@@ -328,7 +327,8 @@ def Adaptive_LSTD_algorithm_batch_type2(trajectories,
                                         V, 
                                         D, 
                                         R, 
-                                        Gs, 
+                                        Gs,
+                                        logger, 
                                         config
                                      ):
     # LSTD operator:
@@ -452,7 +452,7 @@ def Adaptive_LSTD_algorithm_batch_type2(trajectories,
                 new_lambda = adam_optimizer.x
             else:
                 new_lambda = lambda_ - config.lr * grad
-            
+            #pdb.set_trace()
             if new_lambda >= 0 and new_lambda <= 1:
                 lambda_ = new_lambda
                 print('gradient: {0}'.format(grad))
