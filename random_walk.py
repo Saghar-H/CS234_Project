@@ -3,17 +3,16 @@ import gym_walk
 import pdb
 import numpy as np
 import random
-import copy
 import matplotlib.pyplot as plt
 from pprint import pprint
 from grid_search_utils import find_optimal_lambda_grid_search, find_adaptive_optimal_lambda_grid_search, draw_optimal_lambda_grid_search, draw_box_grid_search
-from lstd_algorithms import LSTD_algorithm, Adaptive_LSTD_algorithm, Adaptive_LSTD_algorithm_batch
+from lstd_algorithms import LSTD_algorithm, Adaptive_LSTD_algorithm, Adaptive_LSTD_algorithm_batch, compute_CV_loss
 from compute_utils import get_discounted_return, compute_P
 from Config import Config
 #import pudb
 ################  Parameters #################
 done = False
-log_events = False
+log_events = True
 
 if log_events:
     from tensorboard_utils import Logger
@@ -26,13 +25,13 @@ config = Config(
     num_episodes = 10000,
     A_inv_epsilon = 1e-4,
     gamma = 0.5,
-    default_lambda = 0.75,
+    default_lambda = 0.3,
     lr = 0.01,
     use_adaptive_lambda = True,
     grad_clip_norm = 10,
     compute_autograd = False,
     use_adam_optimizer = True,
-    batch_size = 4,
+    batch_size = 16,
 )
 
 ##########################################################
