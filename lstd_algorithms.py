@@ -63,7 +63,7 @@ def Adaptive_LSTD_algorithm(trajectories,
     loss = []
     running_loss = []
     num_episodes = len(trajectories.keys())
-    adam_optimizer = ADAM()
+    adam_optimizer = ADAM(x_init = config.default_lambda, alpha=config.lr)
     lambda_ = config.default_lambda
     
     for ep in range(config.num_episodes):
@@ -193,7 +193,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
     loss = []
     running_loss = []
     num_episodes = len(trajectories.keys())
-    adam_optimizer = ADAM()
+    adam_optimizer = ADAM(x_init = config.default_lambda, alpha=config.lr)
     lambda_ = config.default_lambda
     
     valid_episode_counter = 0
@@ -223,7 +223,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
             adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], config.gamma, lambda_, timestep)
             ep_rewards.append(reward)
             ep_states.append(cur_state)
-            
+        pdb.set_trace()   
         theta = adaptive_LSTD_lambda.theta
         A = adaptive_LSTD_lambda.A
         b = adaptive_LSTD_lambda.b
@@ -277,13 +277,13 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
                 auto_grad = Auto_grad.loss_autograd_fun(trajectories, Phi, config.num_features, config.gamma, lambda_, Gs)
                 print('gradient diff:{0}'.format(abs(grad-auto_grad)))
             if config.use_adam_optimizer:
-                adam_optimizer.x = lambda_
-                adam_optimizer.update(grad, ep)
+                adam_optimizer.update(grad, valid_episode_counter+1)
                 new_lambda = adam_optimizer.x
             else:
                 new_lambda = lambda_ - config.lr * grad
             if new_lambda >= 0 and new_lambda <= 1:
                 lambda_ = new_lambda
+                print('gradient: {0}'.format(grad))
                 print('current lambda:{0}'.format(lambda_))
             ep_discountedrewards = get_discounted_return(ep_rewards, config.gamma)
             # print('ep_discounted:{0}'.format(ep_discountedrewards))

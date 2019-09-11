@@ -89,7 +89,6 @@ class LSTD:
         current timestep.
     """
         #pdb.set_trace()
-
         self.A =  self.A + np.inner(np.reshape((phi - gamma * phi_next),(self.z.shape[0],1)),
                                     np.transpose(np.reshape(self.z,(1,self.z.shape[0]))))
         self.b = self.b +  self.z * reward
