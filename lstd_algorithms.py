@@ -184,7 +184,8 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
                                     V, 
                                     D, 
                                     R, 
-                                    Gs, 
+                                    Gs,
+                                    logger, 
                                     config
                                  ):
     # LSTD operator:
@@ -217,17 +218,20 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
             epsilon_lambda_gradient = np.zeros(config.num_states)
             H_diag_gradient = np.zeros(config.num_states)
             episode_loss = 0
-        
+            
         cur_state = traj[0][0]
         adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
 
         for timestep in range(len(traj)):
-
             cur_state, reward, next_state, done = traj[timestep]
             adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], config.gamma, lambda_, timestep)
             ep_rewards.append(reward)
             ep_states.append(cur_state)
-        pdb.set_trace()   
+        if logger:
+            logger.log_scalar('average trajectories reward', np.mean(ep_rewards),  valid_episode_counter)
+            logger.writer.flush()
+
+        #pdb.set_trace()   
         theta = adaptive_LSTD_lambda.theta
         A = adaptive_LSTD_lambda.A
         b = adaptive_LSTD_lambda.b
@@ -277,6 +281,10 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
                                                epsilon_lambda_gradient, 
                                                H_diag_gradient,
                                                grad_clip_max_norm = config.grad_clip_norm)
+            if logger:
+                logger.log_scalar('CV loss lambda gradients per batch', grad,  valid_episode_counter/config.batch_size)
+                logger.writer.flush()
+
             if config.compute_autograd:    
                 auto_grad = Auto_grad.loss_autograd_fun(trajectories, Phi, config.num_features, config.gamma, lambda_, Gs)
                 print('gradient diff:{0}'.format(abs(grad-auto_grad)))
