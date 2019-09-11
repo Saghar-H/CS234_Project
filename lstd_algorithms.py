@@ -227,7 +227,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
             adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], config.gamma, lambda_, timestep)
             ep_rewards.append(reward)
             ep_states.append(cur_state)
-        pdb.set_trace()   
+        
         theta = adaptive_LSTD_lambda.theta
         A = adaptive_LSTD_lambda.A
         b = adaptive_LSTD_lambda.b
@@ -308,6 +308,162 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
     #print("average loss after training: ", np.mean(loss))
     return adaptive_LSTD_lambda, theta, np.mean(loss), G, lambda_
 
+
+'''
+The same as Adaptive_LSTD_algorithm_batch, except A and b
+are calculated based on all the episodes.
+'''
+def Adaptive_LSTD_algorithm_batch_type2(trajectories, 
+                                        Phi, 
+                                        P, 
+                                        V, 
+                                        D, 
+                                        R, 
+                                        Gs, 
+                                        config
+                                     ):
+    # LSTD operator:
+
+    Auto_grad = AutoGrad(compute_CV_loss, 4)
+    Auto_grad.gradient_fun()
+    adaptive_LSTD_lambda = LSTD(config.num_features)
+    G = {}
+    loss = []
+    running_loss = []
+    num_episodes = len(trajectories.keys())
+    adam_optimizer = ADAM(x_init = config.default_lambda, alpha=config.lr)
+    lambda_ = config.default_lambda
+    
+    ##### First go over all the trajectories and calculate estimate A and b:
+    for ep in range(config.num_episodes):
+        traj = trajectories[ep]
+        if len(traj) <= 4:
+            continue           
+        for timestep in range(len(traj)):
+            cur_state, reward, next_state, done = traj[timestep]
+            adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], 
+                                              reward, 
+                                              Phi[next_state, :], 
+                                              config.gamma, 
+                                              lambda_, 
+                                              timestep
+                                             )
+        
+#     theta = adaptive_LSTD_lambda.theta
+#     A = adaptive_LSTD_lambda.A
+#     b = adaptive_LSTD_lambda.b
+#     A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon)
+    pudb.set_trace()
+ ######## Now use the above A and b to calculate optimal lambda:   
+    valid_episode_counter = 0    
+    for ep in range(config.num_episodes):
+        traj = trajectories[ep]
+        G[ep] = [] 
+        if len(traj) <= 4:
+            continue
+        if valid_episode_counter % config.batch_size == 0:           
+            ep_rewards = []
+            ep_states = []
+            Z = np.zeros((config.num_features, config.num_states))
+            Z_gradient = np.zeros((config.num_features, config.num_states))
+            H_diag = np.zeros(config.num_states) # n 
+            eps = np.zeros(config.num_states)
+            states_count = np.zeros(config.num_states)
+            epsilon_lambda_gradient = np.zeros(config.num_states)
+            H_diag_gradient = np.zeros(config.num_states)
+            episode_loss = 0
+        
+        cur_state = traj[0][0]
+        
+        adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
+
+        for timestep in range(len(traj)):
+
+            cur_state, reward, next_state, done = traj[timestep]
+            adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], config.gamma, lambda_, timestep)
+            ep_rewards.append(reward)
+            ep_states.append(cur_state)
+        #pudb.set_trace()
+        theta = adaptive_LSTD_lambda.theta
+        A = adaptive_LSTD_lambda.A
+        b = adaptive_LSTD_lambda.b
+        A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon)
+
+        
+        for timestep in range(len(traj)-1):
+            cur_state, reward, next_state, done = traj[timestep]
+            states_count[cur_state] += 1
+            ct = states_count[cur_state]
+            Z[:,cur_state] = (ct-1)/ct *Z[:,cur_state]+ 1/ct * compute_z(lambda_, config.gamma, Phi, ep_states, timestep )
+            Z_gradient[:, cur_state] = (ct-1)/ct * Z_gradient[:, cur_state] + \
+                                        1/ct * compute_z_gradient(lambda_, config.gamma, Phi, ep_states, timestep)      
+            
+            H_diag[cur_state] = (ct-1)/ct * H_diag[cur_state] + \
+                                1/ct * compute_hjj(Phi, lambda_, config.gamma, ep_states, timestep, A_inv)
+            
+            eps[cur_state] = (ct-1)/ct * eps[cur_state] + \
+                             1/ct * compute_eps_t(Phi, theta, config.gamma, reward, ep_states, timestep)
+            
+            epsilon_lambda_gradient[cur_state] = (ct-1)/ct * epsilon_lambda_gradient[cur_state] + \
+                                                1/ct * compute_epsilon_lambda_gradient(Phi,
+                                                                                       lambda_, 
+                                                                                       config.gamma,
+                                                                                       A, 
+                                                                                       b,  
+                                                                                       A_inv, 
+                                                                                       Z, 
+                                                                                       timestep, 
+                                                                                       ep_states, 
+                                                                                       ep_rewards
+                                                                                      )
+            
+            H_diag_gradient[cur_state] = (ct-1)/ct * H_diag_gradient[cur_state] + 1/ct * compute_hjj_gradient(Phi, 
+                                                                                                              lambda_, 
+                                                                                                              config.gamma, 
+                                                                                                              ep_states, 
+                                                                                                              timestep, 
+                                                                                                              A, 
+                                                                                                              b,  
+                                                                                                              A_inv
+                                                                                                             )
+        # update the gradients of the batch:
+        if valid_episode_counter % config.batch_size == 0:
+            grad = compute_lcv_lambda_gradient(eps, 
+                                               H_diag, 
+                                               ep_states, 
+                                               epsilon_lambda_gradient, 
+                                               H_diag_gradient,
+                                               grad_clip_max_norm = config.grad_clip_norm)
+            if config.compute_autograd:    
+                auto_grad = Auto_grad.loss_autograd_fun(trajectories, Phi, config.num_features, config.gamma, lambda_, Gs)
+                print('gradient diff:{0}'.format(abs(grad-auto_grad)))
+
+            if config.use_adam_optimizer:
+                adam_optimizer.update(grad, valid_episode_counter+1)
+                new_lambda = adam_optimizer.x
+            else:
+                new_lambda = lambda_ - config.lr * grad
+            
+            if new_lambda >= 0 and new_lambda <= 1:
+                lambda_ = new_lambda
+                print('gradient: {0}'.format(grad))
+                print('current lambda:{0}'.format(lambda_))
+            ep_discountedrewards = get_discounted_return(ep_rewards, config.gamma)
+            # print('ep_discounted:{0}'.format(ep_discountedrewards))
+            if len(ep_discountedrewards) > 0:
+                ep_loss = np.mean(
+                    [(np.dot(Phi[ep_states[t], :], theta) - ep_discountedrewards[t]) ** 2 for t in range(len(ep_states))])
+                G[ep] = ep_discountedrewards
+                running_loss.append(ep_loss)
+        valid_episode_counter += 1
+    # After we calculated the Theta parameter from the training data
+    loss, _ = calculate_batch_loss(trajectories, G, theta, Phi)
+    # print('episode loss:{0}'.format(loss))
+    # print(LSTD_lambda.A, LSTD_lambda.b)
+    #print("Final Lambda: {0}".format(lambda_))
+    #print("average running loss in training: ", np.mean(running_loss))
+    #print("average loss after training: ", np.mean(loss))
+    return adaptive_LSTD_lambda, theta, np.mean(loss), G, lambda_
 
 '''
 This needs to be here to avoid having circular dependencies.
