@@ -265,7 +265,7 @@ def calculate_batch_loss(trajectories, G, theta, Phi):
     :param G: dictionary of episodes return values: {ep0 : [g0, g1, ... ]}
     :return: list of episodes loss, average over episodes's loss
     '''
-    num_episodes = len(trajectories.keys())
+    num_episodes = len(trajectories)
     loss = []
     for ep in range(num_episodes):
         traj = trajectories[ep]

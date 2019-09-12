@@ -29,5 +29,5 @@ class ADAM:
         self.v_t = self.beta_2*self.v_t + (1-self.beta_2)*(g_t*g_t)	#updates the moving averages of the squared gradient
         m_cap = self.m_t/(1-(self.beta_1**t))		#calculates the bias-corrected estimates
         v_cap = self.v_t/(1-(self.beta_2**t))		#calculates the bias-corrected estimates
-        #self.alpha = self.alpha/math.sqrt(t) # decaying learning rate
+        self.alpha = self.alpha/math.sqrt(t) # decaying learning rate
         self.x = self.x - (self.alpha*m_cap)/(math.sqrt(v_cap) + self.epsilon)	#updates the parameters

@@ -24,17 +24,17 @@ config = Config(
     env_name = 'Boyan',
     num_features = 4,
     num_states = 13,
-    num_episodes = 10000,
-    A_inv_epsilon = 1e-3,
+    num_episodes = 100,
+    A_inv_epsilon = 1e-8,
     gamma = 0.5,
-    default_lambda = 0.75,
+    default_lambda = 0.4,
     lr = .001,
     use_adaptive_lambda = True,
     grad_clip_norm = 10,
     compute_autograd = False,
     use_adam_optimizer = True,
-    batch_size = 8,
-    upsampling_rate = 10,
+    batch_size = 1,
+    upsampling_rate = 1,
 )
 
 ##########################################################
@@ -99,8 +99,13 @@ D, V, trajectories, Gs, R = run_env_episodes(config.num_episodes)
 print('Done finding D and V!')
 ##Upsample 1's:
 #upsampled_Gs, upsampled_trajectories = upsample_trajectories(Gs, trajectories, config.upsampling_rate)
-
-Phi = np.random.rand(config.num_states, config.num_features)
+if config.env_name == 'WalkFiveStates-v0':
+    Phi = np.random.rand(config.num_states, config.num_features)
+else:
+    Phi= 1/4 * np.array([[4, 0,0,0],[3,1,0,0],[2,2,0,0],[1,3,0,0],[0,4,0,0],[0,3,1,0], [0,2,2,0], [0,1,3,0], [0,0,4,0],
+                        [0,0,3,1], [0,0,2,2], [0,0,1,3], [0,0,0,4]])
+    
+        
 # D = np.diag([0.12443139 ,0.24981192 ,0.25088312, 0.25018808 ,0.12468549])
 # V = np.array([0, 0.01776151, 0.071083, 0.26708894 ,1])
 

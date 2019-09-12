@@ -10,7 +10,7 @@ def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
     LSTD_lambda = LSTD(num_features)
     G = {}
     running_loss = []
-    num_episodes = len(trajectories.keys())
+    num_episodes = len(trajectories)
     for ep in range(num_episodes):
         G[ep] = []
         traj = trajectories[ep]
@@ -62,7 +62,7 @@ def Adaptive_LSTD_algorithm(trajectories,
     G = {}
     loss = []
     running_loss = []
-    num_episodes = len(trajectories.keys())
+    num_episodes = len(trajectories)
     adam_optimizer = ADAM(x_init = config.default_lambda, alpha=config.lr)
     lambda_ = config.default_lambda
     
@@ -91,6 +91,7 @@ def Adaptive_LSTD_algorithm(trajectories,
             ep_rewards.append(reward)
             ep_states.append(cur_state)
         theta = adaptive_LSTD_lambda.theta
+        print(theta)
         A = adaptive_LSTD_lambda.A
         b = adaptive_LSTD_lambda.b
         A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon)
@@ -230,6 +231,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
 
         #pdb.set_trace()   
         theta = adaptive_LSTD_lambda.theta
+        print(theta)
         A = adaptive_LSTD_lambda.A
         b = adaptive_LSTD_lambda.b
         A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon)
@@ -305,6 +307,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
         valid_episode_counter += 1
     # After we calculated the Theta parameter from the training data
     loss, _ = calculate_batch_loss(trajectories, G, theta, Phi)
+    print('Theta values: {0}'.format(theta))
     # print('episode loss:{0}'.format(loss))
     # print(LSTD_lambda.A, LSTD_lambda.b)
     #print("Final Lambda: {0}".format(lambda_))
@@ -489,8 +492,8 @@ def compute_CV_loss(trajectories,
     :param epsilon:
     :return:
     '''
-    total_num_tuples = sum([len(traj) for traj in trajectories.values()])
-    num_episodes = len(trajectories.keys())
+    total_num_tuples = sum([len(traj) for traj in trajectories])
+    num_episodes = len(trajectories)
     loto_loss = []
     step = 0
     for i in range(min(1000,num_episodes)):
