@@ -1,5 +1,5 @@
 import gym
-#import gym_walk
+import gym_walk
 from boyan_exp import BOYAN_MDP
 import pdb
 import numpy as np
@@ -10,7 +10,6 @@ from grid_search_utils import find_optimal_lambda_grid_search, find_adaptive_opt
 from lstd_algorithms import LSTD_algorithm, Adaptive_LSTD_algorithm, Adaptive_LSTD_algorithm_batch, Adaptive_LSTD_algorithm_batch_type2, compute_CV_loss
 from compute_utils import get_discounted_return, compute_P
 from Config import Config
-#import pudb
 ################  Parameters #################
 done = False
 log_events = True
@@ -19,21 +18,21 @@ if log_events:
     from tensorboard_utils import Logger
         
 config = Config(
-    seed = 1356,
+    seed = 1357,
     #env_name = 'WalkFiveStates-v0',
     env_name = 'Boyan',
     num_features = 4,
     num_states = 13,
     num_episodes = 100,
-    A_inv_epsilon = 1e-8,
-    gamma = 0.5,
-    default_lambda = 0.4,
-    lr = .001,
+    A_inv_epsilon = 1e-3,
+    gamma = .50,
+    default_lambda = 0.5,
+    lr = .1,
     use_adaptive_lambda = True,
     grad_clip_norm = 10,
     compute_autograd = False,
     use_adam_optimizer = True,
-    batch_size = 1,
+    batch_size = 4,
     upsampling_rate = 1,
 )
 
@@ -179,7 +178,6 @@ if log_events:
     path = os.path.dirname(os.path.abspath(__file__))
     logger_name = 'Adaptive lambda_{0:.3}_Gamma_{1:.3}'.format(selected_lambda, config.gamma)
     logger = Logger(path + '/temp/logs/test', logger_name)
-
 
 cv_loss = compute_CV_loss(trajectories, Phi, config.num_features, config.gamma, selected_lambda, Gs, logger)
 

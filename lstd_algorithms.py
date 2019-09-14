@@ -94,7 +94,7 @@ def Adaptive_LSTD_algorithm(trajectories,
         print(theta)
         A = adaptive_LSTD_lambda.A
         b = adaptive_LSTD_lambda.b
-        A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon)
+        A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon, rcond=.1)
         
         for timestep in range(len(traj)-1):
             cur_state, reward, next_state, done = traj[timestep]
@@ -234,7 +234,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
         print(theta)
         A = adaptive_LSTD_lambda.A
         b = adaptive_LSTD_lambda.b
-        A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon)
+        A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon, rcond=.1)
         
         for timestep in range(len(traj)-1):
             cur_state, reward, next_state, done = traj[timestep]
@@ -396,7 +396,7 @@ def Adaptive_LSTD_algorithm_batch_type2(trajectories,
         theta = adaptive_LSTD_lambda.theta
         A = adaptive_LSTD_lambda.A
         b = adaptive_LSTD_lambda.b
-        A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon)
+        A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon, rcond=.1)
 
         
         for timestep in range(len(traj)-1):
@@ -506,6 +506,7 @@ def compute_CV_loss(trajectories,
             del loto_trajectories[i][j]
             model, _, loss, _ = LSTD_algorithm(loto_trajectories, Phi, num_features, gamma, lambda_)
             theta = model.theta
+            #theta = [-24, -16, -8,0]
             # pdb.set_trace()
             tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2
             loto_loss.append(tuple_loss)
@@ -513,11 +514,11 @@ def compute_CV_loss(trajectories,
             if logger:
                 logger.log_scalar('average trajectories loss', loss, step)
                 logger.log_scalar('current tuple loto cv', tuple_loss, step)
-                logger.log_scalar('mean loto cv', np.mean(loto_loss), step)
+                logger.log_scalar('mean loto cv', np.mean(loto_loss)**.5, step)
                 logger.writer.flush()
                 step += 1
 
-                print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)))
-
-    cv_loss = np.mean(loto_loss)
-    return cv_loss
+                print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)**.5))
+    pudb.set_trace()
+    cv_loss = np.mean(loto_loss) 
+    return cv_loss ** 0.5

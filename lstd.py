@@ -46,7 +46,7 @@ class LSTD:
     @property
     def theta(self):
         """Compute the weight vector via `A^{-1} b`."""
-        _theta = np.dot(np.linalg.pinv(self.A), self.b)
+        _theta = np.dot(np.linalg.pinv(self.A, rcond=.1), self.b)
         return _theta
 
     def update(self, phi, reward, phi_next, gamma, lambda_, timestep):
@@ -71,6 +71,7 @@ class LSTD:
         self.A = (1-beta) * self.A + beta * np.inner((phi - gamma * phi_next), self.z)
         self.b = (1-beta) * self.b + beta * self.z * reward
 
+        
     def update_boyan(self, phi, reward, phi_next, gamma, lambda_, timestep):
         """Update from new experience, i.e. from a transition `(x,r,xp)`.
 
