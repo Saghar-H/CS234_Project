@@ -1,5 +1,5 @@
 import gym
-import gym_walk
+#import gym_walk
 from boyan_exp import BOYAN_MDP
 import pdb
 import numpy as np
@@ -7,7 +7,7 @@ import random
 import matplotlib.pyplot as plt
 from pprint import pprint
 from grid_search_utils import find_optimal_lambda_grid_search, find_adaptive_optimal_lambda_grid_search, draw_optimal_lambda_grid_search, draw_box_grid_search
-from lstd_algorithms import LSTD_algorithm, Adaptive_LSTD_algorithm, Adaptive_LSTD_algorithm_batch, Adaptive_LSTD_algorithm_batch_type2, compute_CV_loss
+from lstd_algorithms import minibatch_LSTD, LSTD_algorithm, Adaptive_LSTD_algorithm, Adaptive_LSTD_algorithm_batch, Adaptive_LSTD_algorithm_batch_type2, compute_CV_loss
 from compute_utils import get_discounted_return, compute_P
 from Config import Config
 ################  Parameters #################
@@ -25,10 +25,10 @@ config = Config(
     num_states = 13,
     num_episodes = 100,
     A_inv_epsilon = 1e-3,
-    gamma = .50,
-    default_lambda = 0.5,
+    gamma = 1.0,
+    default_lambda = 0.4,
     lr = .1,
-    use_adaptive_lambda = True,
+    use_adaptive_lambda = False,
     grad_clip_norm = 10,
     compute_autograd = False,
     use_adam_optimizer = True,
@@ -171,7 +171,9 @@ if config.use_adaptive_lambda:
 else:
     print('Using default Lambda : {0}'.format(config.default_lambda))
     selected_lambda = config.default_lambda
-
+    #pdb.set_trace()
+    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G= minibatch_LSTD(trajectories, Phi, config.num_features, config.gamma, selected_lambda)
+pdb.set_trace()
 logger = None
 if log_events:
     import os

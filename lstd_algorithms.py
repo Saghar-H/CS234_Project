@@ -1,9 +1,52 @@
 import numpy as np
 from autograd_cls import AutoGrad 
 from compute_utils import compute_lcv_lambda_gradient, compute_epsilon_lambda_gradient, compute_hjj, compute_z, compute_z_gradient, compute_eps_t, compute_hjj_gradient, get_discounted_return, calculate_batch_loss
-from lstd import LSTD
+from lstd import LSTD, MiniBatchLSTDLambda
 from adam import ADAM
 import copy
+import pdb
+
+
+def minibatch_LSTD(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
+    LSTD_lambda = MiniBatchLSTDLambda(gamma, lambda_, Phi)
+    G = {}
+    running_loss = []
+    num_episodes = len(trajectories)
+    for ep in range(num_episodes):
+        G[ep] = []
+        traj = trajectories[ep]
+        ep_rewards = []
+        ep_states = []
+        cur_state, reward, next_state, done = traj[0]
+        LSTD_lambda.update(None, 0 , cur_state)
+        cur_state = next_state
+        #LSTD_lambda.reset_boyan(Phi[cur_state, :])
+        for timestep in range(len(traj)):
+            cur_state, reward, next_state, done = traj[timestep]
+            LSTD_lambda.update(cur_state, reward, next_state)
+            ep_rewards.append(reward)
+            ep_states.append(cur_state)
+            if done:
+                LSTD_lambda.update(next_state, 0, None)
+        theta = LSTD_lambda.theta
+        ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
+        # print('ep_discounted:{0}'.format(ep_discountedrewards))
+        if len(ep_discountedrewards) > 0:
+            ep_loss = np.mean(
+                [(np.dot(Phi[ep_states[t], :], theta) - ep_discountedrewards[t]) ** 2 for t in range(len(ep_states))])
+            # print('Episode {0} loss is {1}'.format(ep, ep_loss))
+            # print('Episode {0} rewards are {1}'.format(ep, ep_rewards))
+            G[ep] = ep_discountedrewards
+            running_loss.append(ep_loss)
+    # After we calculated the Theta parameter from the training data
+    loss, _ = calculate_batch_loss(trajectories, G, theta, Phi)
+    # print('episode loss:{0}'.format(loss))
+    # print(LSTD_lambda.A, LSTD_lambda.b)
+
+    # print("average running loss in training: ", sum(running_loss) / num_episodes)
+    # print("average loss after training: ", sum(loss) / num_episodes)
+    average_loss = np.mean(loss)
+    return LSTD_lambda, theta, average_loss, G
 
 def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
     # LSTD operator:
