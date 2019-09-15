@@ -23,12 +23,12 @@ config = Config(
     env_name = 'Boyan',
     num_features = 4,
     num_states = 13,
-    num_episodes = 100,
+    num_episodes = 200,
     A_inv_epsilon = 1e-3,
     gamma = 1.0,
-    default_lambda = 0.4,
-    lr = .1,
-    use_adaptive_lambda = False,
+    default_lambda = 0.75,
+    lr = .001,
+    use_adaptive_lambda = True,
     grad_clip_norm = 10,
     compute_autograd = False,
     use_adam_optimizer = True,
@@ -173,7 +173,7 @@ else:
     selected_lambda = config.default_lambda
     #pdb.set_trace()
     adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G= minibatch_LSTD(trajectories, Phi, config.num_features, config.gamma, selected_lambda)
-pdb.set_trace()
+#pdb.set_trace()
 logger = None
 if log_events:
     import os

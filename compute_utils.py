@@ -162,9 +162,9 @@ def compute_epsilon_lambda_gradient(Phi, _lambda, gamma, A, b,  A_inv, Z, j, ep_
     b_grad = compute_b_gradient(_lambda, gamma, Phi, ep_states, rewards)
     term1 = -(Phi[cur_state, :]-gamma* Phi[next_state, :])
     term2 = A_inv_grad @ b
-    term3 = A_inv @ b_grad
+    term3 = A_inv @ b_grad.reshape((-1,1))
     term4 = term1 @ (term2 + term3)
-    return term4
+    return term4[0]
 
 def compute_lcv_lambda_gradient(epsilon, H, ep_states, epsilon_lambda_gradient, H_gradient, grad_clip_max_norm=0):
     '''

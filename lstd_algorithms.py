@@ -232,21 +232,22 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
 
     Auto_grad = AutoGrad(compute_CV_loss, 4)
     Auto_grad.gradient_fun()
-    adaptive_LSTD_lambda = LSTD(config.num_features)
+    #adaptive_LSTD_lambda = LSTD(config.num_features)
+    adaptive_LSTD_lambda = MiniBatchLSTDLambda(config.gamma, config.default_lambda, Phi)
     G = {}
     loss = []
     running_loss = []
     num_episodes = len(trajectories)
     adam_optimizer = ADAM(x_init = config.default_lambda, alpha=config.lr)
     lambda_ = config.default_lambda
-    
     valid_episode_counter = 0
-    
     for ep in range(config.num_episodes):
         traj = trajectories[ep]
         G[ep] = [] 
         if len(traj) <= 4:
-            continue        
+            continue       
+        cur_state, reward, next_state, done = traj[0]
+        adaptive_LSTD_lambda.update(None, 0 , cur_state) 
         if valid_episode_counter % config.batch_size == 0:           
             ep_rewards = []
             ep_states = []
@@ -259,24 +260,24 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
             H_diag_gradient = np.zeros(config.num_states)
             episode_loss = 0
             
-        cur_state = traj[0][0]
-        adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
+        #cur_state = traj[0][0]
+        #adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
 
         for timestep in range(len(traj)):
             cur_state, reward, next_state, done = traj[timestep]
-            adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], config.gamma, lambda_, timestep)
+            adaptive_LSTD_lambda.update(cur_state, reward, next_state)
+            if done:
+                adaptive_LSTD_lambda.update(next_state, 0, None)
+            #adaptive_LSTD_lambda.update_boyan(Phi[cur_state, :], reward, Phi[next_state, :], config.gamma, lambda_, timestep)
             ep_rewards.append(reward)
             ep_states.append(cur_state)
-            
         if logger:
             logger.log_scalar('average trajectories reward', np.mean(ep_rewards),  valid_episode_counter)
             logger.writer.flush()
 
-        #pdb.set_trace()   
         theta = adaptive_LSTD_lambda.theta
-        print(theta)
         A = adaptive_LSTD_lambda.A
-        b = adaptive_LSTD_lambda.b
+        b = adaptive_LSTD_lambda.b.reshape((-1,1))
         A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon, rcond=.1)
         
         for timestep in range(len(traj)-1):
@@ -292,7 +293,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
             
             eps[cur_state] = (ct-1)/ct * eps[cur_state] + \
                              1/ct * compute_eps_t(Phi, theta, config.gamma, reward, ep_states, timestep)
-            
+
             epsilon_lambda_gradient[cur_state] = (ct-1)/ct * epsilon_lambda_gradient[cur_state] + \
                                                 1/ct * compute_epsilon_lambda_gradient(Phi,
                                                                                        lambda_, 
@@ -340,6 +341,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
                 lambda_ = new_lambda
                 print('gradient: {0}'.format(grad))
                 print('current lambda:{0}'.format(lambda_))
+                print('current theta:{0}'.format(theta))
             ep_discountedrewards = get_discounted_return(ep_rewards, config.gamma)
             # print('ep_discounted:{0}'.format(ep_discountedrewards))
             if len(ep_discountedrewards) > 0:
