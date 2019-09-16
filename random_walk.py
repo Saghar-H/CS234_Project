@@ -34,6 +34,8 @@ config = Config(
     use_adam_optimizer = True,
     batch_size = 4,
     upsampling_rate = 1,
+    step_size_gamma = 0.1,
+    step_size_lambda = 0.05,
 )
 
 ##########################################################
@@ -185,11 +187,13 @@ cv_loss = compute_CV_loss(trajectories, Phi, config.num_features, config.gamma, 
 
 #print('Finding optimal lambda using LSTD Lambda Algorithm')
 #result = find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi,Gs)
-#print('Gamma, Lambda, Loss')
-#print(result)
-#draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
+result = find_adaptive_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config)
+print('Gamma, Lambda, Loss')
+print(result)
+draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
 #result = find_optimal_lambda_grid_search(trajectories, Phi,Gs)
-# print('Gamma, Lambda, Loss')
-# print(result)
-# draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
-# draw_box_grid_search(trajectories, R)
+result = find_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config)
+print('Gamma, Lambda, Loss')
+print(result)
+draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
+draw_box_grid_search(trajectories, R)
