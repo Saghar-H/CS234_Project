@@ -556,14 +556,13 @@ def compute_CV_loss(trajectories,
             tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2
             loto_loss.append(tuple_loss)
             
-            if logger:
-                logger.log_scalar('average trajectories loss', loss, step)
-                logger.log_scalar('current tuple loto cv', tuple_loss, step)
-                logger.log_scalar('mean loto cv', np.mean(loto_loss)**.5, step)
-                logger.writer.flush()
-                step += 1
+        if logger:
+            logger.log_scalar('average trajectories loss', loss, step)
+            logger.log_scalar('current tuple loto cv', tuple_loss, step)
+            logger.log_scalar('mean loto cv', np.mean(loto_loss)**.5, step)
+            logger.writer.flush()
+            step += 1
 
-                print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)**.5))
-    pudb.set_trace()
+        print('trajectory :{0}, current mean loto loss:{1}'.format(i, np.mean(loto_loss)**.5))
     cv_loss = np.mean(loto_loss) 
     return cv_loss ** 0.5

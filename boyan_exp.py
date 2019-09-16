@@ -11,9 +11,9 @@ class BOYAN_MDP:
 
     def save_mdp_to_png(self):
         mdp_spec = self.spec
-        with open(self.file_name, 'wb') as file:
-            file.write(mdp.graph_to_png(mdp_spec.to_graph()))
-        mdp.display_mdp(mdp_spec)
+#         with open(self.file_name, 'wb') as file:
+#             file.write(mdp.graph_to_png(mdp_spec.to_graph()))
+#        mdp.display_mdp(mdp_spec)
 
     def boyan_markov_chain_env(self):
         spec = mdp.MDPSpec()

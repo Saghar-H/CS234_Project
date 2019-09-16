@@ -1,4 +1,6 @@
 from lstd_algorithms import minibatch_LSTD, LSTD_algorithm, Adaptive_LSTD_algorithm, Adaptive_LSTD_algorithm_batch, Adaptive_LSTD_algorithm_batch_type2, compute_CV_loss
+import numpy as np
+import matplotlib.pyplot as plt
 
 def find_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config, logger = False):
     gamma_lambda_loss = []
@@ -15,7 +17,7 @@ def find_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config, lo
                 optimal_loss = loss
                 optimal_lambda = lambda_
             print("CV loss for lambda = {0} and gamma = {1} is = {2}".format(lambda_, gamma, loss)) 
-            lambda_ += step_size_lambda
+            lambda_ += config.step_size_lambda
         gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])       
         gamma += config.step_size_gamma
     return np.array(gamma_lambda_loss)
@@ -26,7 +28,7 @@ def find_adaptive_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, c
     gamma = 0.0
     while gamma < 1:
         #_, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm(trajectories, num_features, Phi, P, V, D, R, lr, gamma, lambda_=0.5, epsilon=0.0)
-        _, _, optimal_loss, _, optimal_lambd= Adaptive_LSTD_algorithm_batch(trajectories, Phi, P, V, D, R, Gs, logger, config)
+        _, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm_batch(trajectories, Phi, P, V, D, R, Gs, logger, config)
         gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])       
         gamma += config.step_size_gamma
     return np.array(gamma_lambda_loss)
