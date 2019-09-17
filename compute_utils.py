@@ -1,9 +1,46 @@
 import numpy as np
+import scipy
 import pdb
 from pprint import pprint
 import copy 
 from random import shuffle
 import pudb
+
+
+def compute_Psi(Phi, D, P, optimal_lambda, config):
+    term = np.eye(config.num_states) - config.gamma * optimal_lambda * P
+    # finding inverse(term)
+    b = np.eye(config.num_states)
+    
+    try:
+        if scipy.sparse.issparse(term):
+            inv_term = scipy.sparse.linalg.lsmr(term,  
+                                                    b.toarray().squeeze())[0]
+        else:
+            inv_term = np.linalg.lstsq(term, b.squeeze(), rcond = config.rcond)[0]
+    except np.linalg.LinAlgError  as e:
+        print ('Inverse matrix failed...'+ e)
+    
+    Psi = Phi.T @ D @ inv_term @( np.eye(config.num_states) - config.gamma * P) 
+    return Psi
+
+def compute_H(Phi, D, P, optimal_lambda, config):
+    Psi = compute_Psi(Phi, D, P, optimal_lambda, config)
+    term = np.dot(Psi, Phi)
+    # finding inverse(term)
+    b = np.eye(config.num_features)
+    try:
+        if scipy.sparse.issparse(term):
+            inv_term = scipy.sparse.linalg.lsmr(term,  
+                                                    b.toarray().squeeze())[0]
+        else:
+            inv_term = np.linalg.lstsq(term, b.squeeze(), rcond = config.rcond)[0]
+    except np.linalg.LinAlgError  as e:
+        print ('Inverse matrix failed...'+ e)
+    
+    H = Phi @ inv_term @ Psi
+    return H
+
 
 def compute_z(_lambda:float, 
 			  gamma:float, 
@@ -317,3 +354,26 @@ def upsample_trajectories(G, trajectories, upsample_rate):
     all_Gs_shuffled = [all_Gs[i] for i in indices]
     all_trajectories_shuffled = [all_trajectories[i] for i in indices]
     return all_Gs_shuffled, all_trajectories_shuffled
+
+def calculate_batch_rmspbe_loss(trajectories, G, theta, Phi, R, D, P, lambda_, config):
+    '''
+    :param theta: Value function parameter such that V= Phi * Theta
+    :param trajectories: dictionary of episodes trajectories: {ep0 : [(state, reward, state_next, done), ...]}
+    :param G: dictionary of episodes return values: {ep0 : [g0, g1, ... ]}
+    :return: list of episodes loss, average over episodes's loss
+    '''
+    H = compute_H(Phi, D, P, lambda_, config)
+    BE = R + config.gamma * P @ Phi @ theta
+    PBE = H @ BE
+    num_episodes = len(trajectories)
+    loss = []
+    for ep in range(num_episodes):
+        traj = trajectories[ep]
+        if len(traj) <= 4 or len(G[ep]) <= 0:
+            continue
+        ep_loss = np.mean(
+            [(np.dot(Phi[traj[t][0], :], theta) - PBE[traj[t][0]]) ** 2 for t in range(len(traj))])
+        loss.append(ep_loss)
+    avg_loss = (np.mean(loss)) ** 0.5
+    
+    return loss, avg_loss

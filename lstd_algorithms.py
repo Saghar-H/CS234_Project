@@ -1,6 +1,6 @@
 import numpy as np
 from autograd_cls import AutoGrad 
-from compute_utils import compute_lcv_lambda_gradient, compute_epsilon_lambda_gradient, compute_hjj, compute_z, compute_z_gradient, compute_eps_t, compute_hjj_gradient, get_discounted_return, calculate_batch_loss
+from compute_utils import compute_lcv_lambda_gradient, compute_epsilon_lambda_gradient, compute_hjj, compute_z, compute_z_gradient, compute_eps_t, compute_hjj_gradient, get_discounted_return, calculate_batch_loss, calculate_batch_rmspbe_loss
 from lstd import LSTD, MiniBatchLSTDLambda
 from adam import ADAM
 import copy
@@ -348,7 +348,9 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
         valid_episode_counter += 1
     # After we calculated the Theta parameter from the training data
     loss, rmse = calculate_batch_loss(trajectories, G, theta, Phi)
+    _,rmspbe = calculate_batch_rmspbe_loss(trajectories, G, theta, Phi, R, D, P, lambda_, config)
     print('Theta values: {0}'.format(theta))
+    print('episode RMSPBE :{0}'.format(rmspbe))
     # print('episode loss:{0}'.format(loss))
     # print(LSTD_lambda.A, LSTD_lambda.b)
     #print("Final Lambda: {0}".format(lambda_))

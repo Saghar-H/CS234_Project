@@ -41,8 +41,8 @@ if log_events:
 #if randomwwalk: tabular, inverted: num_features = 5, num_states = 5, dependent = 3,5
 config = Config(
     seed = args.seed,
-    env_name = 'RandomWalk-v0',
-    #env_name = 'Boyan',
+    #env_name = 'RandomWalk-v0',
+    env_name = 'Boyan',
     walk_type = args.walk_type,
     num_features = 5,#4,
     num_states = 5,#13,
@@ -62,6 +62,7 @@ config = Config(
     seed_iterations=5, 
     seed_step_size=5, 
     random_init_lambda = args.rand_lambda,
+    rcond = 1e-14,
 )
 
 ##########################################################
@@ -72,6 +73,8 @@ env = init_env(config.env_name, config.seed)
 if config.env_name == 'RandomWalk-v0':
     transition_probs = env.env.P
 else:
+    config.num_features = 4
+    config.num_states = 13
     transition_probs = env.transitions
 print("###############Transition Probabilities####################")
 print(transition_probs)
