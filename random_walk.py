@@ -1,5 +1,6 @@
 #import gym_walk
 from boyan_exp import BOYAN_MDP
+
 import pdb
 import numpy as np
 import random
@@ -37,10 +38,11 @@ if log_events:
         
 config = Config(
     seed = args.seed,
-    #env_name = 'WalkFiveStates-v0',
-    env_name = 'Boyan',
-    num_features = 4,
-    num_states = 13,
+    env_name = 'WalkFiveStates-v0',
+    #env_name = 'Boyan',
+    walk_type = 'tabular',
+    num_features = 5,#4,
+    num_states = 5,#13,
     num_episodes = args.episodes,
     A_inv_epsilon = 1e-3,
     gamma = args.gamma,
@@ -76,7 +78,26 @@ print('Done finding D and V!')
 ##Upsample 1's:
 #upsampled_Gs, upsampled_trajectories = upsample_trajectories(Gs, trajectories, config.upsampling_rate)
 if config.env_name == 'WalkFiveStates-v0':
-    Phi = np.random.rand(config.num_states, config.num_features)
+    if config.walk_type == 'tabular':      
+        Phi = np.array([[1,0,0,0,0],
+                        [0,1,0,0,0],
+                        [0,0,1,0,0],
+                        [0,0,0,1,0],
+                        [0,0,0,0,1]])
+    elif config.walk_type == 'inverted':      
+        Phi = np.array([[0,0.5,0.5,0.5,0.5],
+                        [0.5,0,0.5,0.5,0.5],
+                        [0.5,0.5,0,0.5,0.5],
+                        [0.5,0.5,0.5,0,0.5],
+                        [0.5,0.5,0.5,0.5,0]])
+    elif config.walk_type == 'dependent':      
+        Phi = np.array([[1,0,0],
+                        [1/2**0.5, 1/2**0.5, 0],
+                        [1/3**0.5, 1/3**0.5, 1/3**0.5],
+                        [0, 1/2**0.5, 1/2**0.5],
+                        [0,0,1]])
+    else:
+        Phi = np.array(np.random(config.num_states, config.num_features))
 else:
     Phi= 1/4 * np.array([[4, 0,0,0],[3,1,0,0],[2,2,0,0],[1,3,0,0],[0,4,0,0],[0,3,1,0], [0,2,2,0], [0,1,3,0], [0,0,4,0],
                         [0,0,3,1], [0,0,2,2], [0,0,1,3], [0,0,0,4]])
@@ -158,7 +179,7 @@ if log_events:
     logger_name = 'Adaptive lambda_{0:.3}_Gamma_{1:.3}'.format(selected_lambda, config.gamma)
     logger = Logger(path + '/temp/logs/test', logger_name)
 
-cv_loss = compute_CV_loss(trajectories, Phi, config.num_features, config.gamma, selected_lambda, Gs, logger)
+#cv_loss = compute_CV_loss(trajectories, Phi, config.num_features, config.gamma, selected_lambda, Gs, logger)
 
 config_prefix = config.to_str()
 print(config_prefix)
