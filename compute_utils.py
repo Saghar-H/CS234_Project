@@ -3,7 +3,7 @@ import pdb
 from pprint import pprint
 import copy 
 from random import shuffle
-
+import pudb
 
 def compute_z(_lambda:float, 
 			  gamma:float, 
@@ -274,7 +274,8 @@ def calculate_batch_loss(trajectories, G, theta, Phi):
         ep_loss = np.mean(
             [(np.dot(Phi[traj[t][0], :], theta) - G[ep][t]) ** 2 for t in range(len(traj))])
         loss.append(ep_loss)
-    avg_loss = np.mean(loss)
+    avg_loss = (np.mean(loss)) ** 0.5
+    
     return loss, avg_loss
 
 

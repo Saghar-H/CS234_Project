@@ -1,4 +1,3 @@
-import gym
 #import gym_walk
 from boyan_exp import BOYAN_MDP
 import pdb
@@ -9,7 +8,26 @@ from pprint import pprint
 from grid_search_utils import find_optimal_lambda_grid_search, find_adaptive_optimal_lambda_grid_search, draw_optimal_lambda_grid_search, draw_box_grid_search
 from lstd_algorithms import minibatch_LSTD, LSTD_algorithm, Adaptive_LSTD_algorithm, Adaptive_LSTD_algorithm_batch, Adaptive_LSTD_algorithm_batch_type2, compute_CV_loss
 from compute_utils import get_discounted_return, compute_P
+from env_utils import init_env, run_env_episodes
 from Config import Config
+import pudb
+
+
+################# Input Arguments ################
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--seed', type=int, default=1358)
+parser.add_argument('--lr', type=float, default=0.2)
+parser.add_argument('--episodes', type=int, default=20)
+parser.add_argument('--batch', type=int, default=4)
+parser.add_argument('--default_lambda', type=float, default=0.75)
+parser.add_argument('--gamma', type=float, default=1.0)
+parser.add_argument('--rand_lambda', type=bool, default=False)
+
+args = parser.parse_args()
+
+##########################################################
+
 ################  Parameters #################
 done = False
 log_events = True
@@ -18,76 +36,33 @@ if log_events:
     from tensorboard_utils import Logger
         
 config = Config(
-    seed = 1357,
+    seed = args.seed,
     #env_name = 'WalkFiveStates-v0',
     env_name = 'Boyan',
     num_features = 4,
     num_states = 13,
-    num_episodes = 200,
+    num_episodes = args.episodes,
     A_inv_epsilon = 1e-3,
-    gamma = 1.0,
-    default_lambda = 0.75,
-    lr = .001,
+    gamma = args.gamma,
+    default_lambda = args.default_lambda,
+    lr = args.lr,
     use_adaptive_lambda = True,
     grad_clip_norm = 10,
     compute_autograd = False,
     use_adam_optimizer = True,
-    batch_size = 4,
+    batch_size = args.batch,
     upsampling_rate = 1,
     step_size_gamma = 0.1,
     step_size_lambda = 0.05,
+    seed_iterations=5, 
+    seed_step_size=5, 
+    random_init_lambda = args.rand_lambda,
 )
 
 ##########################################################
-
-def init_env(env_name, seed):
-    if env_name == 'WalkFiveStates-v0':
-        env = gym.make(env_name)
-    else:
-        boyan_mdp = BOYAN_MDP('boyan_mdp.png')
-        env = boyan_mdp.env
-    env.reset()
-    random.seed(seed)
-    env.seed(seed)
-    np.random.seed(seed)
-    return env
-
-def run_env_episodes(num_episodes):
-    D = np.ones(env.observation_space.n) * 1e-10
-    V = np.zeros(env.observation_space.n)
-    R = np.zeros(env.observation_space.n)
-    trajectories = []
-    Gs = []
-    total_steps = 0
-    for ep in range(num_episodes):
-        trajectories.append([])
-        cur_state = env.reset()
-        done = False
-        ep_rewards = []
-        ep_states = []
-
-        while not done:
-            next_state, reward, done, info = env.step(random.randint(0, env.action_space.n - 1))
-            trajectories[ep].append((cur_state, reward, next_state, done))
-            D[cur_state] += 1
-            total_steps += 1
-            ep_rewards.append(reward)
-            ep_states.append(cur_state)
-            cur_state = next_state
-
-        ep_discountedrewards = get_discounted_return(ep_rewards, config.gamma)
-        Gs.append(ep_discountedrewards)
-
-        for i in range(len(ep_states)):
-            V[ep_states[i]] += ep_discountedrewards[i]
-            R[ep_states[i]] += ep_rewards[i]
-
-    #print('Monte Carlo D:{0}'.format(D * 1.0 / total_steps, total_steps))
-    #print('Monte Carlo V:{0}'.format(V * 1.0 / D))
-    #print('----------Trajectories---------')
-    #print(trajectories[0])
-    return np.diag(D / total_steps), V / D, trajectories, Gs, R/D
-
+run_id = random.randint(0,10000)
+print('run_id:{0}'.format(run_id))
+print(config)
 env = init_env(config.env_name, config.seed)
 if config.env_name == 'WalkFiveStates-v0':
     transition_probs = env.env.P
@@ -96,7 +71,7 @@ else:
 print("###############Transition Probabilities####################")
 print(transition_probs)
 print('Generate Monte Carlo Estimates of D and V...')
-D, V, trajectories, Gs, R = run_env_episodes(config.num_episodes)
+D, V, trajectories, Gs, R = run_env_episodes(env, config)
 print('Done finding D and V!')
 ##Upsample 1's:
 #upsampled_Gs, upsampled_trajectories = upsample_trajectories(Gs, trajectories, config.upsampling_rate)
@@ -185,15 +160,43 @@ if log_events:
 
 cv_loss = compute_CV_loss(trajectories, Phi, config.num_features, config.gamma, selected_lambda, Gs, logger)
 
-#print('Finding optimal lambda using LSTD Lambda Algorithm')
-#result = find_adaptive_optimal_lambda_grid_search(trajectories, R, Phi,Gs)
-result = find_adaptive_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config)
-print('Gamma, Lambda, Loss')
-print(result)
-draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
-#result = find_optimal_lambda_grid_search(trajectories, Phi,Gs)
+config_prefix = config.to_str()
+print(config_prefix)
+########## run adaptive lambda over all values of gamma and lambda and plot the graph:
+###Uncomment below if need to run over a specific value of lambda:
+# config['default_lambda'] = 0.5
+# result = find_adaptive_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config)
+# print('Gamma, Lambda, Loss')
+# print(result)
+# dirpath = os.getcwd()
+# file_name = 'adaptive_lambda_lambda_{1}_lr_{2}_gridsearch.png'.format(config.gamma, config.default_lambda, config.lr)
+# fig_file_name = os.path.join(dirpath, 'figures',file_name)
+# draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1], file_path = fig_file_name)
+
+#Use below to draw the box plot for adaptive lambda algorithm: The only variables are learning rate and number of episodes:
+dirpath = os.getcwd()
+file_names = ['adaptive_lambda_lambdas_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
+              'adaptive_lambda_loss_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
+fig_file_names = [os.path.join(dirpath, 'figures',file_names[0]),
+                  os.path.join(dirpath, 'figures',file_names[1])]
+draw_box_grid_search(env,
+                     P,
+                     Phi, 
+                     config, 
+                     logger,
+                     seed_iterations=config.seed_iterations, 
+                     seed_step_size=config.seed_step_size, 
+                     step_size_lambda=config.step_size_lambda, 
+                     step_size_gamma=config.step_size_gamma,
+                     file_paths = fig_file_names,
+                     random_init_lambda = config.random_init_lambda
+                     )
+########## Find optimal lambda for each gamma. This is using lstd algorithm, not searching for lambda:
 result = find_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config)
-print('Gamma, Lambda, Loss')
-print(result)
-draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1])
-draw_box_grid_search(trajectories, R)
+dirpath = os.getcwd()
+file_names = ['optimal_lambda_lstd_lambda_lambdas_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
+              'optimal_lambda_lstd_lambda_losses_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
+fig_file_names = [os.path.join(dirpath, 'figures',file_names[0]),
+                  os.path.join(dirpath, 'figures',file_names[1])]
+draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1], file_path = fig_file_names[0], config=config)
+draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,2], file_path = fig_file_names[1], config=config)
