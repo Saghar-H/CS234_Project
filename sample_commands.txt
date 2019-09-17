@@ -1,0 +1,13 @@
+nohup python random_walk.py --lr 0.2 --episodes 1000 --rand_lambda T --walk_type tabular &> logs/grid_lr_02_episodes_1000_rand_lambda_True.txt &
+nohup python random_walk.py --lr 0.1 --episodes 1000 --rand_lambda T --walk_type tabular &> logs/grid_lr_01_episodes_1000_rand_lambda_True.txt &
+nohup python random_walk.py --lr 0.2 --episodes 1000 --rand_lambda T --walk_type tabular &> logs/grid_lr_02_episodes_1000_rand_lambda_True.txt &
+nohup python random_walk.py --lr 0.1 --episodes 1000 --rand_lambda T --walk_type tabular &> logs/grid_lr_01_episodes_1000_rand_lambda_True.txt &
+nohup python random_walk.py --lr 0.2 --episodes 1000 --rand_lambda T --walk_type tabular &> logs/grid_lr_02_episodes_1000_rand_lambda_True.txt &
+nohup python random_walk.py --lr 0.1 --episodes 1000 --rand_lambda T --walk_type tabular &> logs/grid_lr_01_episodes_1000_rand_lambda_True.txt &
+
+nohup python random_walk.py --lr 0.2 --episodes 1000 --walk_type tabular  &> logs/grid_lr_02_episodes_1000_rand_lambda_False.txt &
+nohup python random_walk.py --lr 0.1 --episodes 1000  --walk_type tabular &> logs/grid_lr_01_episodes_1000_rand_lambda_False.txt &
+nohup python random_walk.py --lr 0.2 --episodes 1000 --walk_type tabular &> logs/grid_lr_02_episodes_1000_rand_lambda_False.txt &
+nohup python random_walk.py --lr 0.1 --episodes 1000 --walk_type tabular &> logs/grid_lr_01_episodes_1000_rand_lambda_False.txt &
+nohup python random_walk.py --lr 0.2 --episodes 1000 --walk_type tabular &> logs/grid_lr_02_episodes_1000_rand_lambda_False.txt &
+nohup python random_walk.py --lr 0.1 --episodes 1000 --walk_type tabular  &> logs/grid_lr_01_episodes_1000_rand_lambda_False.txt &

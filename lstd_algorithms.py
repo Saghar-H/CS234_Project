@@ -5,6 +5,7 @@ from lstd import LSTD, MiniBatchLSTDLambda
 from adam import ADAM
 import copy
 import pdb
+import pudb
 
 
 def minibatch_LSTD(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
@@ -258,7 +259,6 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
             
         #cur_state = traj[0][0]
         #adaptive_LSTD_lambda.reset_boyan(Phi[cur_state, :])
-
         for timestep in range(len(traj)):
             cur_state, reward, next_state, done = traj[timestep]
             adaptive_LSTD_lambda.update(cur_state, reward, next_state)

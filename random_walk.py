@@ -24,6 +24,7 @@ parser.add_argument('--batch', type=int, default=4)
 parser.add_argument('--default_lambda', type=float, default=0.75)
 parser.add_argument('--gamma', type=float, default=1.0)
 parser.add_argument('--rand_lambda', type=bool, default=False)
+parser.add_argument('--walk_type', type=str, default='tabular')
 
 args = parser.parse_args()
 
@@ -36,11 +37,13 @@ log_events = True
 if log_events:
     from tensorboard_utils import Logger
         
+#if mdp: num_features = 4, num_states = 13.
+#if randomwwalk: tabular, inverted: num_features = 5, num_states = 5, dependent = 3,5
 config = Config(
     seed = args.seed,
-    env_name = 'WalkFiveStates-v0',
+    env_name = 'RandomWalk-v0',
     #env_name = 'Boyan',
-    walk_type = 'tabular',
+    walk_type = args.walk_type,
     num_features = 5,#4,
     num_states = 5,#13,
     num_episodes = args.episodes,
@@ -66,7 +69,7 @@ run_id = random.randint(0,10000)
 print('run_id:{0}'.format(run_id))
 print(config)
 env = init_env(config.env_name, config.seed)
-if config.env_name == 'WalkFiveStates-v0':
+if config.env_name == 'RandomWalk-v0':
     transition_probs = env.env.P
 else:
     transition_probs = env.transitions
@@ -77,40 +80,44 @@ D, V, trajectories, Gs, R = run_env_episodes(env, config)
 print('Done finding D and V!')
 ##Upsample 1's:
 #upsampled_Gs, upsampled_trajectories = upsample_trajectories(Gs, trajectories, config.upsampling_rate)
-if config.env_name == 'WalkFiveStates-v0':
+if config.env_name == 'RandomWalk-v0':
     if config.walk_type == 'tabular':      
         Phi = np.array([[1,0,0,0,0],
                         [0,1,0,0,0],
                         [0,0,1,0,0],
                         [0,0,0,1,0],
                         [0,0,0,0,1]])
+        config.num_states = 5
+        config.num_features = 5
     elif config.walk_type == 'inverted':      
         Phi = np.array([[0,0.5,0.5,0.5,0.5],
                         [0.5,0,0.5,0.5,0.5],
                         [0.5,0.5,0,0.5,0.5],
                         [0.5,0.5,0.5,0,0.5],
                         [0.5,0.5,0.5,0.5,0]])
+        config.num_features = 5
+        config.num_states = 5
+        
     elif config.walk_type == 'dependent':      
         Phi = np.array([[1,0,0],
                         [1/2**0.5, 1/2**0.5, 0],
                         [1/3**0.5, 1/3**0.5, 1/3**0.5],
                         [0, 1/2**0.5, 1/2**0.5],
                         [0,0,1]])
+        config.num_features = 3
+        config.num_states = 5
+
     else:
         Phi = np.array(np.random(config.num_states, config.num_features))
 else:
     Phi= 1/4 * np.array([[4, 0,0,0],[3,1,0,0],[2,2,0,0],[1,3,0,0],[0,4,0,0],[0,3,1,0], [0,2,2,0], [0,1,3,0], [0,0,4,0],
                         [0,0,3,1], [0,0,2,2], [0,0,1,3], [0,0,0,4]])
-    
-        
-# D = np.diag([0.12443139 ,0.24981192 ,0.25088312, 0.25018808 ,0.12468549])
-# V = np.array([0, 0.01776151, 0.071083, 0.26708894 ,1])
 
 '''
 Now compute the MRP value of P: P(s'|s)
 '''
 
-if config.env_name == 'WalkFiveStates-v0':
+if config.env_name == 'RandomWalk-v0':
     P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 else:
     transitions = transition_probs
@@ -213,11 +220,11 @@ draw_box_grid_search(env,
                      random_init_lambda = config.random_init_lambda
                      )
 ########## Find optimal lambda for each gamma. This is using lstd algorithm, not searching for lambda:
-result = find_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config)
-dirpath = os.getcwd()
-file_names = ['optimal_lambda_lstd_lambda_lambdas_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
-              'optimal_lambda_lstd_lambda_losses_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
-fig_file_names = [os.path.join(dirpath, 'figures',file_names[0]),
-                  os.path.join(dirpath, 'figures',file_names[1])]
-draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1], file_path = fig_file_names[0], config=config)
-draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,2], file_path = fig_file_names[1], config=config)
+# result = find_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config)
+# dirpath = os.getcwd()
+# file_names = ['optimal_lambda_lstd_lambda_lambdas_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
+#               'optimal_lambda_lstd_lambda_losses_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
+# fig_file_names = [os.path.join(dirpath, 'figures',file_names[0]),
+#                   os.path.join(dirpath, 'figures',file_names[1])]
+# draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1], file_path = fig_file_names[0], config=config, ylabel='lambda')
+# draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,2], file_path = fig_file_names[1], config=config, ylabel='loss')

@@ -59,11 +59,11 @@ def find_adaptive_optimal_lambda_grid_search(trajectories,
         gamma += config.step_size_gamma
     return np.array(gamma_lambda_loss)
 
-def draw_optimal_lambda_grid_search(gamma, lambda_, file_path, config):
+def draw_optimal_lambda_grid_search(gamma, lambda_, file_path, config, ylabel):
     plt.figure()
     plt.plot(gamma, lambda_, 'ro')
     plt.title('Optimal lambda for each gamma using grid search in {0} iterations'.format(config.num_episodes))
-    plt.ylabel('Optimal lambda')
+    plt.ylabel(ylabel)
     plt.xlabel('Gamma')
     plt.grid()
     plt.savefig(file_path)
