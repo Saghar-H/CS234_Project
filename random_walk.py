@@ -115,6 +115,8 @@ if config.env_name == 'RandomWalk-v0':
 else:
     Phi= 1/4 * np.array([[4, 0,0,0],[3,1,0,0],[2,2,0,0],[1,3,0,0],[0,4,0,0],[0,3,1,0], [0,2,2,0], [0,1,3,0], [0,0,4,0],
                         [0,0,3,1], [0,0,2,2], [0,0,1,3], [0,0,0,4]])
+    config.num_features = 4
+    config.num_states = 13  
 
 '''
 Now compute the MRP value of P: P(s'|s)
@@ -205,29 +207,29 @@ print(config_prefix)
 # draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1], file_path = fig_file_name)
 
 #Use below to draw the box plot for adaptive lambda algorithm: The only variables are learning rate and number of episodes:
-dirpath = os.getcwd()
-file_names = ['adaptive_lambda_lambdas_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
-              'adaptive_lambda_loss_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
-fig_file_names = [os.path.join(dirpath, 'figures',file_names[0]),
-                  os.path.join(dirpath, 'figures',file_names[1])]
-draw_box_grid_search(env,
-                     P,
-                     Phi, 
-                     config, 
-                     logger,
-                     seed_iterations=config.seed_iterations, 
-                     seed_step_size=config.seed_step_size, 
-                     step_size_lambda=config.step_size_lambda, 
-                     step_size_gamma=config.step_size_gamma,
-                     file_paths = fig_file_names,
-                     random_init_lambda = config.random_init_lambda
-                     )
-########## Find optimal lambda for each gamma. This is using lstd algorithm, not searching for lambda:
-# result = find_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config)
 # dirpath = os.getcwd()
-# file_names = ['optimal_lambda_lstd_lambda_lambdas_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
-#               'optimal_lambda_lstd_lambda_losses_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
+# file_names = ['adaptive_lambda_lambdas_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
+#               'adaptive_lambda_loss_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
 # fig_file_names = [os.path.join(dirpath, 'figures',file_names[0]),
 #                   os.path.join(dirpath, 'figures',file_names[1])]
-# draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1], file_path = fig_file_names[0], config=config, ylabel='lambda')
-# draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,2], file_path = fig_file_names[1], config=config, ylabel='loss')
+# draw_box_grid_search(env,
+#                      P,
+#                      Phi, 
+#                      config, 
+#                      logger,
+#                      seed_iterations=config.seed_iterations, 
+#                      seed_step_size=config.seed_step_size, 
+#                      step_size_lambda=config.step_size_lambda, 
+#                      step_size_gamma=config.step_size_gamma,
+#                      file_paths = fig_file_names,
+#                      random_init_lambda = config.random_init_lambda
+#                      )
+########## Find optimal lambda for each gamma. This is using lstd algorithm, not searching for lambda:
+result = find_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config)
+dirpath = os.getcwd()
+file_names = ['optimal_lambda_lstd_lambda_lambdas_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
+              'optimal_lambda_lstd_lambda_losses_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
+fig_file_names = [os.path.join(dirpath, 'figures',file_names[0]),
+                  os.path.join(dirpath, 'figures',file_names[1])]
+draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1], file_path = fig_file_names[0], config=config, ylabel='lambda')
+draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,2], file_path = fig_file_names[1], config=config, ylabel='loss')
