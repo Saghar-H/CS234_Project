@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import random
 import copy
 from lstd_algorithms import minibatch_LSTD, LSTD_algorithm, Adaptive_LSTD_algorithm, Adaptive_LSTD_algorithm_batch, Adaptive_LSTD_algorithm_batch_type2, compute_CV_loss
-from env_utils import init_env, run_env_episodes
+from env_utils import init_env, run_env_episodes_walk, run_env_episodes_boyan
 import pudb
 
 
@@ -77,8 +77,9 @@ def set_seed(seed, env):
 
 '''
 Box chart link: http://blog.bharatbhole.com/creating-boxplots-with-matplotlib/
+Use this only for adaptive lambda
 '''
-def draw_box_grid_search(env,
+def draw_box_grid_search_adaptive_lambda(env,
                          P,
                          Phi, 
                          config, 
@@ -98,7 +99,13 @@ def draw_box_grid_search(env,
  
     for i in range(seed_iterations):
         set_seed(seed, env)
-        D, V, trajectories, Gs, R = run_env_episodes(env, config)
+        
+    if 'walk' in config.env_name:
+        D, V, trajectories, Gs, R = run_env_episodes_walk(env, config)
+
+    else:
+        D, V, trajectories, Gs, R = run_env_episodes_boyan(env, config)
+    
         gamma_lambda_loss = find_adaptive_optimal_lambda_grid_search(trajectories,
                                                                      P, 
                                                                      V, 
@@ -136,6 +143,72 @@ def draw_box_grid_search(env,
     ax = fig.add_subplot(111)
     ax.boxplot(loss_data)
     plt.title('Adaptive lambda loss for each gamma in for {0} episodes, initial lambda:{1}'.format(config.num_episodes, config.default_lambda))
+    #gamma range
+    ax.set_xticklabels([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+    ax.yaxis.grid(True, linestyle='-', color='lightgrey', alpha=0.5)
+    plt.xlabel('Gamma')
+    plt.ylabel('Loss')
+    fig.savefig(file_paths[1], bbox_inches='tight')
+    plt.close()
+    
+    
+'''
+Box chart link: http://blog.bharatbhole.com/creating-boxplots-with-matplotlib/
+Use this only for optimal lambda
+'''
+def draw_box_grid_search_optimal_lambda(env,
+                         P,
+                         Phi, 
+                         config, 
+                         logger,
+                         seed_iterations=100, 
+                         seed_step_size=100, 
+                         step_size_lambda=0.05, 
+                         step_size_gamma=0.1,
+                         file_paths = ['box_graph_lambda', 'box_graph_loss'],
+                         random_init_lambda = False):
+    lambda_data = []
+    loss_data = []
+    seed = config.seed
+    gamma_length = int(1/step_size_gamma) + 1;
+    lambdas = [[] for i in range(gamma_length)]
+    losses = [[] for i in range(gamma_length)]
+ 
+    for i in range(seed_iterations):
+        set_seed(seed, env)
+        if 'walk' in config.env_name:
+            D, V, trajectories, Gs, R = run_env_episodes_walk(env, config)
+
+        else:
+            D, V, trajectories, Gs, R = run_env_episodes_boyan(env, config)
+            gamma_lambda_loss = find_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config)
+        for j in range(gamma_length):
+            lambdas[j].append(gamma_lambda_loss[j,1])
+            losses[j].append(gamma_lambda_loss[j,2])
+            
+        seed += seed_step_size
+
+    for k in range(gamma_length):
+        lambda_data.append(lambdas[k])
+        loss_data.append(losses[k])
+   
+    ###Plot lambda box plot:
+    fig = plt.figure(1, figsize=(9, 6))
+    ax = fig.add_subplot(111)
+    ax.boxplot(lambda_data)
+    plt.title('Optimal lambda for each gamma in for {0} episodes'.format(config.num_episodes))
+    #gamma range
+    ax.set_xticklabels([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+    ax.yaxis.grid(True, linestyle='-', color='lightgrey', alpha=0.5)
+    plt.xlabel('Gamma')
+    plt.ylabel('Optimal lambda')
+    fig.savefig(file_paths[0], bbox_inches='tight')
+    plt.close()
+    ###Plot loss box plot:
+    fig = plt.figure(1, figsize=(9, 6))
+    ax = fig.add_subplot(111)
+    ax.boxplot(loss_data)
+    plt.title('Optimal lambda loss for each gamma in for {0} episodes'.format(config.num_episodes))
     #gamma range
     ax.set_xticklabels([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
     ax.yaxis.grid(True, linestyle='-', color='lightgrey', alpha=0.5)

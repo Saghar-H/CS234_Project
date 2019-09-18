@@ -6,10 +6,11 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 from pprint import pprint
-from grid_search_utils import find_optimal_lambda_grid_search, find_adaptive_optimal_lambda_grid_search, draw_optimal_lambda_grid_search, draw_box_grid_search
+from grid_search_utils import find_optimal_lambda_grid_search, find_adaptive_optimal_lambda_grid_search, draw_optimal_lambda_grid_search
+from grid_search_utils import draw_box_grid_search_adaptive_lambda, draw_box_grid_search_optimal_lambda
 from lstd_algorithms import minibatch_LSTD, LSTD_algorithm, Adaptive_LSTD_algorithm, Adaptive_LSTD_algorithm_batch, Adaptive_LSTD_algorithm_batch_type2, compute_CV_loss
 from compute_utils import get_discounted_return, compute_P
-from env_utils import init_env, run_env_episodes
+from env_utils import init_env, run_env_episodes_boyan, run_env_episodes_walk
 from Config import Config
 import pudb
 
@@ -41,8 +42,8 @@ if log_events:
 #if randomwwalk: tabular, inverted: num_features = 5, num_states = 5, dependent = 3,5
 config = Config(
     seed = args.seed,
-    #env_name = 'RandomWalk-v0',
-    env_name = 'Boyan',
+    env_name = 'RandomWalk-v0',
+    #env_name = 'Boyan',
     walk_type = args.walk_type,
     num_features = 5,#4,
     num_states = 5,#13,
@@ -51,7 +52,7 @@ config = Config(
     gamma = args.gamma,
     default_lambda = args.default_lambda,
     lr = args.lr,
-    use_adaptive_lambda = True,
+    use_adaptive_lambda = False,
     grad_clip_norm = 10,
     compute_autograd = False,
     use_adam_optimizer = True,
@@ -72,17 +73,19 @@ print(config)
 env = init_env(config.env_name, config.seed)
 if config.env_name == 'RandomWalk-v0':
     transition_probs = env.env.P
+    D, V, trajectories, Gs, R = run_env_episodes_walk(env, config)
+    
 else:
     config.num_features = 4
     config.num_states = 13
     transition_probs = env.transitions
+    D, V, trajectories, Gs, R = run_env_episodes_boyan(env, config)
+
 print("###############Transition Probabilities####################")
 print(transition_probs)
-print('Generate Monte Carlo Estimates of D and V...')
-D, V, trajectories, Gs, R = run_env_episodes(env, config)
-print('Done finding D and V!')
 ##Upsample 1's:
 #upsampled_Gs, upsampled_trajectories = upsample_trajectories(Gs, trajectories, config.upsampling_rate)
+
 if config.env_name == 'RandomWalk-v0':
     if config.walk_type == 'tabular':      
         Phi = np.array([[1,0,0,0,0],
@@ -183,7 +186,7 @@ else:
     selected_lambda = config.default_lambda
     #pdb.set_trace()
     adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G= minibatch_LSTD(trajectories, Phi, config.num_features, config.gamma, selected_lambda)
-#pdb.set_trace()
+
 logger = None
 if log_events:
     import os
@@ -207,29 +210,38 @@ print(config_prefix)
 # draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1], file_path = fig_file_name)
 
 #Use below to draw the box plot for adaptive lambda algorithm: The only variables are learning rate and number of episodes:
-# dirpath = os.getcwd()
-# file_names = ['adaptive_lambda_lambdas_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
-#               'adaptive_lambda_loss_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
-# fig_file_names = [os.path.join(dirpath, 'figures',file_names[0]),
-#                   os.path.join(dirpath, 'figures',file_names[1])]
-# draw_box_grid_search(env,
-#                      P,
-#                      Phi, 
-#                      config, 
-#                      logger,
-#                      seed_iterations=config.seed_iterations, 
-#                      seed_step_size=config.seed_step_size, 
-#                      step_size_lambda=config.step_size_lambda, 
-#                      step_size_gamma=config.step_size_gamma,
-#                      file_paths = fig_file_names,
-#                      random_init_lambda = config.random_init_lambda
-#                      )
+dirpath = os.getcwd()
+file_names = ['adaptive_lambda_lambdas_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
+              'adaptive_lambda_loss_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
+fig_file_names = [os.path.join(dirpath, 'figures',file_names[0]),
+                  os.path.join(dirpath, 'figures',file_names[1])]
+draw_box_grid_search_adaptive_lambda(env,
+                     P,
+                     Phi, 
+                     config, 
+                     logger,
+                     seed_iterations=config.seed_iterations, 
+                     seed_step_size=config.seed_step_size, 
+                     step_size_lambda=config.step_size_lambda, 
+                     step_size_gamma=config.step_size_gamma,
+                     file_paths = fig_file_names,
+                     random_init_lambda = config.random_init_lambda
+                     )
 ########## Find optimal lambda for each gamma. This is using lstd algorithm, not searching for lambda:
-result = find_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config)
 dirpath = os.getcwd()
 file_names = ['optimal_lambda_lstd_lambda_lambdas_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
               'optimal_lambda_lstd_lambda_losses_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
 fig_file_names = [os.path.join(dirpath, 'figures',file_names[0]),
                   os.path.join(dirpath, 'figures',file_names[1])]
-draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,1], file_path = fig_file_names[0], config=config, ylabel='lambda')
-draw_optimal_lambda_grid_search(gamma=result[:,0], lambda_=result[:,2], file_path = fig_file_names[1], config=config, ylabel='loss')
+draw_box_grid_search_optimal_lambda(env,
+                     P,
+                     Phi, 
+                     config, 
+                     logger,
+                     seed_iterations=config.seed_iterations, 
+                     seed_step_size=config.seed_step_size, 
+                     step_size_lambda=config.step_size_lambda, 
+                     step_size_gamma=config.step_size_gamma,
+                     file_paths = fig_file_names,
+                     random_init_lambda = config.random_init_lambda
+                     )
