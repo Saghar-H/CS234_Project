@@ -62,6 +62,7 @@ config = Config(
     seed_iterations=5, 
     seed_step_size=5, 
     random_init_lambda = args.rand_lambda,
+    rcond = 1e-14,
 )
 
 ##########################################################
@@ -72,6 +73,8 @@ env = init_env(config.env_name, config.seed)
 if config.env_name == 'RandomWalk-v0':
     transition_probs = env.env.P
 else:
+    config.num_features = 4
+    config.num_states = 13
     transition_probs = env.transitions
 print("###############Transition Probabilities####################")
 print(transition_probs)

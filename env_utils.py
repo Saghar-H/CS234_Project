@@ -3,7 +3,7 @@ import numpy as np
 import random
 from boyan_exp import BOYAN_MDP
 from compute_utils import get_discounted_return
-import gym_walk
+#import gym_walk
 
 def init_env(env_name, seed):
     if env_name == 'RandomWalk-v0':
