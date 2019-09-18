@@ -33,11 +33,11 @@ def run_env_episodes(env, config):
         #Breaking change: for non gym-walk, cur_state-1 and next_state-1 should be changed to cur_state and next_state.
         while not done:
             next_state, reward, done, info = env.step(random.randint(0, env.action_space.n - 1))
-            trajectories[ep].append((cur_state-1, reward, next_state-1, done))
-            D[cur_state-1] += 1
+            trajectories[ep].append((cur_state, reward, next_state, done))
+            D[cur_state] += 1
             total_steps += 1
             ep_rewards.append(reward)
-            ep_states.append(cur_state-1)
+            ep_states.append(cur_state)
             cur_state = next_state
 
         ep_discountedrewards = get_discounted_return(ep_rewards, config.gamma)
