@@ -43,13 +43,13 @@ if log_events:
 #if randomwwalk: tabular, inverted: num_features = 5, num_states = 5, dependent = 3,5
 config = Config(
     seed = args.seed,
-    env_name = 'RandomWalk-v0',
-    #env_name = 'Boyan',
+    #env_name = 'RandomWalk-v0',
+    env_name = 'Boyan',
     walk_type = args.walk_type,
     num_features = 5,#4,
     num_states = 5,#13,
     num_train_episodes = args.episodes,
-    num_test_episodes = 50,
+    num_test_episodes = 500,
     A_inv_epsilon = 1e-3,
     gamma = args.gamma,
     default_lambda = args.default_lambda,

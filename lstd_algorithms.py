@@ -559,8 +559,8 @@ def compute_CV_loss(trajectories,
     step = 0
     for i in range(min(1000,num_episodes)):
         traj = trajectories[i]
-        if len(traj) <= 4:
-            continue
+#         if len(traj) <= 4:
+#             continue
         for j in range(len(traj)):
             # leave one tuple oto_trajectoriesout
             loto_trajectories = copy.deepcopy(trajectories)
@@ -621,8 +621,8 @@ def Adaptive_LSTD_algorithm_batch_type3(trajectories,
     for ep in range(config.num_train_episodes):
         traj = trajectories[ep]
         G[ep] = [] 
-        if len(traj) <= 4:
-            continue       
+#         if len(traj) <= 4:
+#             continue       
         cur_state, reward, next_state, done = traj[0]
         adaptive_LSTD_lambda.update(None, 0 , cur_state) 
         if valid_episode_counter % config.batch_size == 0:           
@@ -724,7 +724,7 @@ def Adaptive_LSTD_algorithm_batch_type3(trajectories,
             #pudb.set_trace()
             new_config = copy.deepcopy(config)
             new_config.default_lambda = lambda_
-            current_cv_loss = compute_CV_loss(trajectories[:ep], 
+            current_cv_loss = compute_CV_loss(trajectories, 
                                               Phi, 
                                               P, 
                                               V, 
