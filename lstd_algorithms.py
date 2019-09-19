@@ -722,13 +722,13 @@ def Adaptive_LSTD_algorithm_batch_type3(trajectories,
             #pudb.set_trace()
             new_config = copy.deepcopy(config)
             new_config.default_lambda = lambda_
-            current_cv_loss = compute_CV_loss(trajectories_test, 
+            current_cv_loss = compute_CV_loss(trajectories, 
                                               Phi, 
                                               P, 
                                               V, 
                                               D, 
                                               R, 
-                                              Gs_test,
+                                              Gs,
                                               logger = None, 
                                               config =new_config)
             

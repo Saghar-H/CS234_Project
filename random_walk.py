@@ -116,7 +116,7 @@ if config.env_name == 'RandomWalk-v0':
         config.num_states = 5
 
     else:
-        Phi = np.array(np.random(config.num_states, config.num_features))
+        Phi = np.array(np.random.rand(config.num_states, config.num_features))
 else:
     Phi= 1/4 * np.array([[4, 0,0,0],[3,1,0,0],[2,2,0,0],[1,3,0,0],[0,4,0,0],[0,3,1,0], [0,2,2,0], [0,1,3,0], [0,0,4,0],
                         [0,0,3,1], [0,0,2,2], [0,0,1,3], [0,0,0,4]])
