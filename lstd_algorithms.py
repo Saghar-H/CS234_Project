@@ -561,6 +561,7 @@ def compute_CV_loss(trajectories,
         traj = trajectories[i]
         if len(traj) <= 4:
             continue
+        
         for j in range(len(traj)):
             # leave one tuple oto_trajectoriesout
             loto_trajectories = copy.deepcopy(trajectories)
@@ -575,9 +576,11 @@ def compute_CV_loss(trajectories,
                                                                logger, 
                                                                config)
             theta = model.theta
+            BE = R + config.gamma * P @ Phi @ theta
             #theta = [-24, -16, -8,0]
             # pdb.set_trace()
-            tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2
+            #tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - Gs[i][j]) ** 2
+            tuple_loss = (np.dot(Phi[trajectories[i][j][0], :], theta) - BE[trajectories[i][j][0]]) ** 2
             loto_loss.append(tuple_loss)
             
         if logger:
