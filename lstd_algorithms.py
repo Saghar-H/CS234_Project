@@ -1,6 +1,6 @@
 import numpy as np
 from autograd_cls import AutoGrad 
-from compute_utils import compute_lcv_lambda_gradient, compute_epsilon_lambda_gradient, compute_hjj, compute_z, compute_z_gradient, compute_eps_t, compute_hjj_gradient, get_discounted_return, calculate_batch_loss, calculate_batch_rmspbe_loss
+from compute_utils import compute_lcv_lambda_gradient, compute_epsilon_lambda_gradient, compute_hjj, compute_z, compute_z_gradient, compute_eps_t, compute_hjj_gradient, get_discounted_return, calculate_batch_loss, calculate_batch_rmspbe_loss, invert_matrix
 from lstd import LSTD, MiniBatchLSTDLambda
 from adam import ADAM
 import copy
@@ -40,9 +40,9 @@ def minibatch_LSTD(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
             running_loss.append(ep_loss)
     # After we calculated the Theta parameter from the training data
     loss, rmse = calculate_batch_loss(trajectories, G, theta, Phi)
-
+    _,rmspbe = calculate_batch_rmspbe_loss(trajectories, G, theta, Phi, R, D, P, lambda_, config)
     average_loss = rmse
-    return LSTD_lambda, theta, average_loss, G
+    return LSTD_lambda, theta, average_loss, G, rmspbe
 
 def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
     # LSTD operator:
@@ -78,11 +78,11 @@ def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
     loss, rmse = calculate_batch_loss(trajectories, G, theta, Phi)
     # print('episode loss:{0}'.format(loss))
     # print(LSTD_lambda.A, LSTD_lambda.b)
-
+    _,rmspbe = calculate_batch_rmspbe_loss(trajectories, G, theta, Phi, R, D, P, lambda_, config)
     # print("average running loss in training: ", sum(running_loss) / num_episodes)
     # print("average loss after training: ", sum(loss) / num_episodes)
     average_loss = rmse
-    return LSTD_lambda, theta, average_loss, G
+    return LSTD_lambda, theta, average_loss, G, rmspbe
 
 
 def Adaptive_LSTD_algorithm(trajectories, 
@@ -274,7 +274,8 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
         theta = adaptive_LSTD_lambda.theta
         A = adaptive_LSTD_lambda.A
         b = adaptive_LSTD_lambda.b.reshape((-1,1))
-        A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon, rcond=.1)
+        #A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon, rcond=.1)
+        A_inv = invert_matrix(A) 
         
         for timestep in range(len(traj)-1):
             cur_state, reward, next_state, done = traj[timestep]
@@ -356,7 +357,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
     #print("Final Lambda: {0}".format(lambda_))
     #print("average running loss in training: ", np.mean(running_loss))
     #print("average loss after training: ", np.mean(loss))
-    return adaptive_LSTD_lambda, theta, rmse, G, lambda_
+    return adaptive_LSTD_lambda, theta, rmse, rmspbe, G, lambda_
 
 
 '''
@@ -547,7 +548,7 @@ def compute_CV_loss(trajectories,
             # leave one tuple oto_trajectoriesout
             loto_trajectories = copy.deepcopy(trajectories)
             del loto_trajectories[i][j]
-            model, _, loss, _ = LSTD_algorithm(loto_trajectories, Phi, num_features, gamma, lambda_)
+            model, _, loss, _, rmspbe = LSTD_algorithm(loto_trajectories, Phi, num_features, gamma, lambda_)
             theta = model.theta
             #theta = [-24, -16, -8,0]
             # pdb.set_trace()

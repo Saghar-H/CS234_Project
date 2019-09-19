@@ -7,20 +7,22 @@ from random import shuffle
 import pudb
 
 
-def compute_Psi(Phi, D, P, optimal_lambda, config):
-    term = np.eye(config.num_states) - config.gamma * optimal_lambda * P
-    # finding inverse(term)
-    b = np.eye(config.num_states)
-    
+def invert_matrix(term, rcond = 1e-14):
+    b = np.eye(term.shape[0])
     try:
         if scipy.sparse.issparse(term):
             inv_term = scipy.sparse.linalg.lsmr(term,  
                                                     b.toarray().squeeze())[0]
         else:
-            inv_term = np.linalg.lstsq(term, b.squeeze(), rcond = config.rcond)[0]
+            inv_term = np.linalg.lstsq(term, b.squeeze(), rcond = rcond)[0]
     except np.linalg.LinAlgError  as e:
         print ('Inverse matrix failed...'+ e)
-    
+    return inv_term
+
+def compute_Psi(Phi, D, P, optimal_lambda, config):
+    term = np.eye(config.num_states) - config.gamma * optimal_lambda * P
+    # finding inverse(term)
+    inv_term = invert_matrix(term)    
     Psi = Phi.T @ D @ inv_term @( np.eye(config.num_states) - config.gamma * P) 
     return Psi
 
@@ -28,16 +30,7 @@ def compute_H(Phi, D, P, optimal_lambda, config):
     Psi = compute_Psi(Phi, D, P, optimal_lambda, config)
     term = np.dot(Psi, Phi)
     # finding inverse(term)
-    b = np.eye(config.num_features)
-    try:
-        if scipy.sparse.issparse(term):
-            inv_term = scipy.sparse.linalg.lsmr(term,  
-                                                    b.toarray().squeeze())[0]
-        else:
-            inv_term = np.linalg.lstsq(term, b.squeeze(), rcond = config.rcond)[0]
-    except np.linalg.LinAlgError  as e:
-        print ('Inverse matrix failed...'+ e)
-    
+    inv_term = invert_matrix(term) 
     H = Phi @ inv_term @ Psi
     return H
 
@@ -239,12 +232,14 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D, R):
     I_gamma_P = I - gamma * P
     # print('*****---- P ----*****')
     # print(P)
-    inv1 = np.linalg.pinv(I - gamma * lstd_lambda * P)
+    #inv1 = np.linalg.pinv(I - gamma * lstd_lambda * P)
+    inv1 = invert_matrix(I - gamma * lstd_lambda * P) 
     #psi = phi_t @ D @ inv1 @ I_gamma_P
     psi = phi_t @ D @ inv1
     # print('*****---- psi ----*****')
     # print(psi)
-    inv2 = np.linalg.pinv(psi @ phi)
+    #inv2 = np.linalg.pinv(psi @ phi)
+    inv2 = invert_matrix(psi @ phi)
     H = phi @ inv2 @ psi
     I_H = I - H
     d = np.diag(np.diag(I_H))
@@ -252,10 +247,12 @@ def compute_cv_gradient(phi, theta, gamma, lstd_lambda, P, V, D, R):
     # print(H)
     # print('*****----diag(I-H)----*****')
     # print(d)
-    d_inv1 = np.linalg.pinv(d)
+    #d_inv1 = np.linalg.pinv(d)
+    d_inv1 = invert_matrix(d)
     # print('*****----(diag(I-H))^(-1)----*****')
     # print(d_inv1)
-    d_inv2 = np.linalg.pinv(d_inv1)
+    #d_inv2 = np.linalg.pinv(d_inv1)
+    d_inv2 = invert_matrix(d_inv1)
     # print('*****----(diag(I-H))^(-2)----*****')
     # print(d_inv2)
     psi_gradient = gamma * phi_t @ D @ inv1 @ P @ inv1 @ I_gamma_P

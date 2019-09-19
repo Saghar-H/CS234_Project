@@ -21,7 +21,7 @@ def find_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config, lo
             new_config = copy.deepcopy(config)
             new_config.gamma = gamma
             new_config.default_lambda = lambda_            
-            _, _, loss, _ = minibatch_LSTD(trajectories, Phi, new_config.num_features, new_config.gamma, new_config.default_lambda)
+            _, _, loss, _, rmspbe = minibatch_LSTD(trajectories, Phi, new_config.num_features, new_config.gamma, new_config.default_lambda)
             #_, _, loss, _, _ = Adaptive_LSTD_algorithm_batch(trajectories, Phi, P, V, D, R, Gs, logger, new_config)
             #loss = compute_CV_loss(trajectories, Phi, num_features, gamma, lambda_, Gs, logger)
             if loss < optimal_loss:
@@ -54,8 +54,8 @@ def find_adaptive_optimal_lambda_grid_search(trajectories,
         new_config.gamma = gamma
         if random_init_lambda:
             new_config.default_lambda = random.random()
-        _, _, optimal_loss, _, optimal_lambda = Adaptive_LSTD_algorithm_batch(trajectories, Phi, P, V, D, R, Gs, logger, new_config)
-        gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])       
+        _, _, optimal_loss, rmspbe, _, optimal_lambda = Adaptive_LSTD_algorithm_batch(trajectories, Phi, P, V, D, R, Gs, logger, new_config)
+        gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss, rmspbe])    
         gamma += config.step_size_gamma
     return np.array(gamma_lambda_loss)
 
@@ -91,15 +91,16 @@ def draw_box_grid_search(env,
                          random_init_lambda = False):
     lambda_data = []
     loss_data = []
+    rmspbe_data = []
     seed = config.seed
     gamma_length = int(1/step_size_gamma) + 1;
     lambdas = [[] for i in range(gamma_length)]
     losses = [[] for i in range(gamma_length)]
- 
+    rmspbes = [[] for i in range(gamma_length)]
     for i in range(seed_iterations):
         set_seed(seed, env)
         D, V, trajectories, Gs, R = run_env_episodes(env, config)
-        gamma_lambda_loss = find_adaptive_optimal_lambda_grid_search(trajectories,
+        gamma_lambda_loss_rmspbe = find_adaptive_optimal_lambda_grid_search(trajectories,
                                                                      P, 
                                                                      V, 
                                                                      D, 
@@ -112,13 +113,13 @@ def draw_box_grid_search(env,
         for j in range(gamma_length):
             lambdas[j].append(gamma_lambda_loss[j,1])
             losses[j].append(gamma_lambda_loss[j,2])
-            
+            rmspbes[j].append(gamma_lambda_rmspbe[j,3])
         seed += seed_step_size
 
     for k in range(gamma_length):
         lambda_data.append(lambdas[k])
         loss_data.append(losses[k])
-   
+        rmspbe_data.append(rmspbes[k])
     ###Plot lambda box plot:
     fig = plt.figure(1, figsize=(9, 6))
     ax = fig.add_subplot(111)
