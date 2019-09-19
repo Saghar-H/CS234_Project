@@ -4,6 +4,7 @@ import random
 from boyan_exp import BOYAN_MDP
 from compute_utils import get_discounted_return
 import gym_walk
+import pudb
 
 def init_env(env_name, seed):
     if env_name == 'RandomWalk-v0':
@@ -21,14 +22,15 @@ def init_env(env_name, seed):
 Current random walk generates states from 1 ... last state, need to 
 substract by 1 when adding to the lists.
 '''
-def run_env_episodes_walk(env, config):
+def run_env_episodes_walk(env, config, mode):
     D = np.ones(env.observation_space.n) * 1e-10
     V = np.zeros(env.observation_space.n)
     R = np.zeros(env.observation_space.n)
     trajectories = []
     Gs = []
     total_steps = 0
-    for ep in range(config.num_episodes):
+    num_episodes = config.num_train_episodes if mode == 'train' else config.num_test_episodes
+    for ep in range(num_episodes):
         trajectories.append([])
         cur_state = env.reset()
         done = False
@@ -55,14 +57,16 @@ def run_env_episodes_walk(env, config):
 '''
 Use this when generating Boyan environment traces.
 '''
-def run_env_episodes_boyan(env, config):
+def run_env_episodes_boyan(env, config, mode):
     D = np.ones(env.observation_space.n) * 1e-10
     V = np.zeros(env.observation_space.n)
     R = np.zeros(env.observation_space.n)
     trajectories = []
     Gs = []
     total_steps = 0
-    for ep in range(config.num_episodes):
+    num_episodes = config.num_train_episodes if mode == 'train' else config.num_test_episodes
+
+    for ep in range(num_episodes):
         trajectories.append([])
         cur_state = env.reset()
         done = False

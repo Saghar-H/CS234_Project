@@ -117,7 +117,7 @@ def Adaptive_LSTD_algorithm(trajectories,
     adam_optimizer = ADAM(x_init = config.default_lambda, alpha=config.lr)
     lambda_ = config.default_lambda
     
-    for ep in range(config.num_episodes):
+    for ep in range(num_episodes):
         G[ep] = []
         traj = trajectories[ep]
         if len(traj) <= 4:
@@ -250,7 +250,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
     adam_optimizer = ADAM(x_init = config.default_lambda, alpha=config.lr)
     lambda_ = config.default_lambda
     valid_episode_counter = 0
-    for ep in range(config.num_episodes):
+    for ep in range(num_episodes):
         traj = trajectories[ep]
         G[ep] = [] 
         if len(traj) <= 4:
@@ -398,7 +398,7 @@ def Adaptive_LSTD_algorithm_batch_type2(trajectories,
     adam_optimizer = ADAM(x_init = config.default_lambda, alpha=config.lr)
     lambda_ = config.default_lambda
     ##### First go over all the trajectories and calculate estimate A and b:
-    for ep in range(config.num_episodes):
+    for ep in range(num_episodes):
         traj = trajectories[ep]
         if len(traj) <= 4:
             continue 
@@ -421,7 +421,7 @@ def Adaptive_LSTD_algorithm_batch_type2(trajectories,
     #pudb.set_trace()
  ######## Now use the above A and b to calculate optimal lambda:   
     valid_episode_counter = 0    
-    for ep in range(config.num_episodes):
+    for ep in range(num_episodes):
         traj = trajectories[ep]
         G[ep] = [] 
         if len(traj) <= 4:
@@ -535,12 +535,14 @@ This needs to be here to avoid having circular dependencies.
 '''
 def compute_CV_loss(trajectories, 
                     Phi, 
-                    num_features, 
-                    gamma, 
-                    lambda_, 
-                    Gs, 
-                    logger=False,
-                    epsilon=0.0):
+                    P, 
+                    V, 
+                    D, 
+                    R, 
+                    Gs,
+                    logger, 
+                    config):
+                            
     '''
     :param trajectories:
     :param num_features:
@@ -554,13 +556,21 @@ def compute_CV_loss(trajectories,
     step = 0
     for i in range(min(1000,num_episodes)):
         traj = trajectories[i]
-        if len(traj) <= 4:
-            continue
+#         if len(traj) <= 4:
+#             continue
         for j in range(len(traj)):
             # leave one tuple oto_trajectoriesout
             loto_trajectories = copy.deepcopy(trajectories)
             del loto_trajectories[i][j]
-            model, _, loss, _ = minibatch_LSTD(loto_trajectories, Phi, num_features, gamma, lambda_)
+            model, _, loss, _ = minibatch_LSTD(loto_trajectories, 
+                                               Phi, 
+                                               P, 
+                                               V, 
+                                               D, 
+                                               R, 
+                                               Gs,
+                                               logger, 
+                                               config)
             theta = model.theta
             #theta = [-24, -16, -8,0]
             # pdb.set_trace()
@@ -581,15 +591,17 @@ def compute_CV_loss(trajectories,
 
 
 def Adaptive_LSTD_algorithm_batch_type3(trajectories, 
-                                    Phi, 
-                                    P, 
-                                    V, 
-                                    D, 
-                                    R, 
-                                    Gs,
-                                    logger, 
-                                    config
-                                 ):
+                                        Phi, 
+                                        P, 
+                                        V, 
+                                        D, 
+                                        R, 
+                                        Gs,
+                                        logger, 
+                                        config,
+                                        trajectories_test,
+                                        Gs_test
+                                        ):
     # LSTD operator:
 
     Auto_grad = AutoGrad(compute_CV_loss, 4)
@@ -604,11 +616,11 @@ def Adaptive_LSTD_algorithm_batch_type3(trajectories,
     lambda_ = config.default_lambda
     valid_episode_counter = 0
     
-    for ep in range(config.num_episodes):
+    for ep in range(config.num_train_episodes):
         traj = trajectories[ep]
         G[ep] = [] 
-        if len(traj) <= 4:
-            continue       
+#         if len(traj) <= 4:
+#             continue       
         cur_state, reward, next_state, done = traj[0]
         adaptive_LSTD_lambda.update(None, 0 , cur_state) 
         if valid_episode_counter % config.batch_size == 0:           
@@ -708,14 +720,19 @@ def Adaptive_LSTD_algorithm_batch_type3(trajectories,
           
         if valid_episode_counter % config.compute_cv_iterations == 0:
             #pudb.set_trace()
-            current_cv_loss = compute_CV_loss(trajectories[:ep+1], 
+            new_config = copy.deepcopy(config)
+            new_config.default_lambda = lambda_
+            current_cv_loss = compute_CV_loss(trajectories_test, 
                                               Phi, 
-                                              config.num_features, 
-                                              config.gamma, 
-                                              lambda_, 
-                                              Gs, 
-                                              logger = None)
+                                              P, 
+                                              V, 
+                                              D, 
+                                              R, 
+                                              Gs_test,
+                                              logger = None, 
+                                              config =new_config)
             
+            print('current_cv_loss:{0}'.format(current_cv_loss))
             if logger:
                 #pudb.set_trace()
                 logger.log_scalar('mean loto cv', current_cv_loss, valid_episode_counter/config.batch_size)
