@@ -42,8 +42,8 @@ if log_events:
 #if randomwwalk: tabular, inverted: num_features = 5, num_states = 5, dependent = 3,5
 config = Config(
     seed = args.seed,
-    env_name = 'RandomWalk-v0',
-    #env_name = 'Boyan',
+    #env_name = 'RandomWalk-v0',
+    env_name = 'Boyan',
     walk_type = args.walk_type,
     num_features = 5,#4,
     num_states = 5,#13,
@@ -169,7 +169,11 @@ if log_events:
 
 if config.use_adaptive_lambda:
     print('Running the Adaptive LSTD Lambda Algorithm ...')
+<<<<<<< HEAD
     adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm_batch_type3(
+=======
+    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_rmspbe, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm_batch(
+>>>>>>> e5a3056f67fab29077c30da68d9add2acee0f4ba
                                                                                                                     trajectories, 
                                                                                                                     Phi, 
                                                                                                                     P, 
@@ -186,7 +190,16 @@ else:
     print('Using default Lambda : {0}'.format(config.default_lambda))
     selected_lambda = config.default_lambda
     #pdb.set_trace()
-    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G= minibatch_LSTD(trajectories, Phi, config.num_features, config.gamma, selected_lambda)
+    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_loss= minibatch_LSTD(trajectories, 
+                                                                                        Phi, 
+                                                                                        P, 
+                                                                                        V, 
+                                                                                        D, 
+                                                                                        R, 
+                                                                                        Gs,
+                                                                                        logger, 
+                                                                                        config
+                                                                                        )
 
 logger = None
 if log_events:
