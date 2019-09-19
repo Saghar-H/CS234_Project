@@ -20,7 +20,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=1358)
 parser.add_argument('--lr', type=float, default=0.2)
-parser.add_argument('--episodes', type=int, default=20)
+parser.add_argument('--episodes', type=int, default=100)
 parser.add_argument('--batch', type=int, default=4)
 parser.add_argument('--default_lambda', type=float, default=0.75)
 parser.add_argument('--gamma', type=float, default=1.0)
@@ -76,8 +76,6 @@ if config.env_name == 'RandomWalk-v0':
     D, V, trajectories, Gs, R = run_env_episodes_walk(env, config)
     
 else:
-    config.num_features = 4
-    config.num_states = 13
     transition_probs = env.transitions
     D, V, trajectories, Gs, R = run_env_episodes_boyan(env, config)
 
