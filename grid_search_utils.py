@@ -29,8 +29,10 @@ def find_optimal_lambda_grid_search(trajectories,P, V, D, R, Phi, Gs, config, lo
                 optimal_lambda = lambda_
             print("loss for lambda = {0} and gamma = {1} is = {2}".format(lambda_, gamma, loss)) 
             lambda_ += config.step_size_lambda
-        gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss])       
+        gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss, rmspbe])       
         gamma += config.step_size_gamma
+        if gamma == 1.0 :
+            gamma = 0.99
     return np.array(gamma_lambda_loss)
 	
 
@@ -57,6 +59,8 @@ def find_adaptive_optimal_lambda_grid_search(trajectories,
         _, _, optimal_loss, rmspbe, _, optimal_lambda = Adaptive_LSTD_algorithm_batch(trajectories, Phi, P, V, D, R, Gs, logger, new_config)
         gamma_lambda_loss.append([gamma, optimal_lambda, optimal_loss, rmspbe])    
         gamma += config.step_size_gamma
+        if gamma == 1.0 :
+            gamma = 0.99
     return np.array(gamma_lambda_loss)
 
 def draw_optimal_lambda_grid_search(gamma, lambda_, file_path, config, ylabel):
@@ -88,7 +92,7 @@ def draw_box_grid_search_adaptive_lambda(env,
                          seed_step_size=100, 
                          step_size_lambda=0.05, 
                          step_size_gamma=0.1,
-                         file_paths = ['box_graph_lambda', 'box_graph_loss'],
+                         file_paths = ['box_graph_lambda', 'box_graph_loss', 'box_graph_rmspbe'],
                          random_init_lambda = False):
     lambda_data = []
     loss_data = []
@@ -151,6 +155,19 @@ def draw_box_grid_search_adaptive_lambda(env,
     plt.ylabel('Loss')
     fig.savefig(file_paths[1], bbox_inches='tight')
     plt.close()
+
+    ###Plot RMSPBE box plot:
+    fig = plt.figure(1, figsize=(9, 6))
+    ax = fig.add_subplot(111)
+    ax.boxplot(rmspbe_data)
+    plt.title('Optimal lambda RMSPBE for each gamma in for {0} episodes'.format(config.num_episodes))
+    #gamma range
+    ax.set_xticklabels([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+    ax.yaxis.grid(True, linestyle='-', color='lightgrey', alpha=0.5)
+    plt.xlabel('Gamma')
+    plt.ylabel('RMSPBE')
+    fig.savefig(file_paths[2], bbox_inches='tight')
+    plt.close()
     
     
 '''
@@ -166,15 +183,17 @@ def draw_box_grid_search_optimal_lambda(env,
                          seed_step_size=100, 
                          step_size_lambda=0.05, 
                          step_size_gamma=0.1,
-                         file_paths = ['box_graph_lambda', 'box_graph_loss'],
+                         file_paths = ['box_graph_lambda', 'box_graph_loss', 'box_graph_rmspbe'],
                          random_init_lambda = False):
     lambda_data = []
     loss_data = []
+    rmspbe_data = []
     seed = config.seed
     gamma_length = int(1/step_size_gamma) + 1;
     lambdas = [[] for i in range(gamma_length)]
     losses = [[] for i in range(gamma_length)]
- 
+    rmspbes = [[] for i in range(gamma_length)]
+    
     for i in range(seed_iterations):
         set_seed(seed, env)
         if 'walk' in config.env_name:
@@ -186,12 +205,13 @@ def draw_box_grid_search_optimal_lambda(env,
         for j in range(gamma_length):
             lambdas[j].append(gamma_lambda_loss[j,1])
             losses[j].append(gamma_lambda_loss[j,2])
-            
+            rmspbes[j].append(gamma_lambda_loss[j,3])
         seed += seed_step_size
 
     for k in range(gamma_length):
         lambda_data.append(lambdas[k])
         loss_data.append(losses[k])
+        rmspbe_data.append(rmspbes[k])
    
     ###Plot lambda box plot:
     fig = plt.figure(1, figsize=(9, 6))
@@ -216,4 +236,17 @@ def draw_box_grid_search_optimal_lambda(env,
     plt.xlabel('Gamma')
     plt.ylabel('Loss')
     fig.savefig(file_paths[1], bbox_inches='tight')
+    plt.close()
+
+    ###Plot RMSPBE box plot:
+    fig = plt.figure(1, figsize=(9, 6))
+    ax = fig.add_subplot(111)
+    ax.boxplot(rmspbe_data)
+    plt.title('Optimal lambda RMSPBE for each gamma in for {0} episodes'.format(config.num_episodes))
+    #gamma range
+    ax.set_xticklabels([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+    ax.yaxis.grid(True, linestyle='-', color='lightgrey', alpha=0.5)
+    plt.xlabel('Gamma')
+    plt.ylabel('RMSPBE')
+    fig.savefig(file_paths[2], bbox_inches='tight')
     plt.close()

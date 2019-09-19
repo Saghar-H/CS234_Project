@@ -219,9 +219,11 @@ print(config_prefix)
 #Use below to draw the box plot for adaptive lambda algorithm: The only variables are learning rate and number of episodes:
 dirpath = os.getcwd()
 file_names = ['adaptive_lambda_lambdas_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
-              'adaptive_lambda_loss_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
+              'adaptive_lambda_loss_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
+              'adaptive_lambda_rmspbe_box_graph_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
 fig_file_names = [os.path.join(dirpath, 'figures',file_names[0]),
-                  os.path.join(dirpath, 'figures',file_names[1])]
+                  os.path.join(dirpath, 'figures',file_names[1]),
+                  os.path.join(dirpath, 'figures',file_names[2])]
 draw_box_grid_search_adaptive_lambda(env,
                      P,
                      Phi, 
@@ -237,9 +239,11 @@ draw_box_grid_search_adaptive_lambda(env,
 ########## Find optimal lambda for each gamma. This is using lstd algorithm, not searching for lambda:
 dirpath = os.getcwd()
 file_names = ['optimal_lambda_lstd_lambda_lambdas_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
-              'optimal_lambda_lstd_lambda_losses_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
+              'optimal_lambda_lstd_lambda_losses_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id),
+              'optimal_lambda_lstd_lambda_rmspbe_{0}_gridsearch_runid_{1}.png'.format(config_prefix, run_id)]
 fig_file_names = [os.path.join(dirpath, 'figures',file_names[0]),
-                  os.path.join(dirpath, 'figures',file_names[1])]
+                  os.path.join(dirpath, 'figures',file_names[1]),
+                  os.path.join(dirpath, 'figures',file_names[2])]
 draw_box_grid_search_optimal_lambda(env,
                      P,
                      Phi, 
