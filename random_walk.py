@@ -21,10 +21,10 @@ import pudb
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=1358)
-parser.add_argument('--lr', type=float, default=1)
+parser.add_argument('--lr', type=float, default= 0.5)
 parser.add_argument('--episodes', type=int, default=100)
 parser.add_argument('--batch', type=int, default=4)
-parser.add_argument('--default_lambda', type=float, default=0.5)
+parser.add_argument('--default_lambda', type=float, default=0.05)
 parser.add_argument('--gamma', type=float, default=.8)
 parser.add_argument('--rand_lambda', type=bool, default=False)
 parser.add_argument('--walk_type', type=str, default='tabular')
@@ -143,6 +143,7 @@ else:
     for state in mdp_spec.states:
         if state.terminal_state:
             P[state.index, state.index] = 1.
+    P /= P.sum(axis=1)[:,np.newaxis]   
     for (state, action), choices in transitions.rewards.items():
             expected_rewards[state.index, action.index] = sum(value * prob for value, prob in choices.items())
 
