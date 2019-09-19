@@ -56,6 +56,81 @@ def minibatch_LSTD(trajectories,
     ms_loss, rms_loss = calculate_batch_mspbe_msbe_mse_losses(trajectories, G, theta, Phi, R, D, P, config)
     return LSTD_lambda, theta, G, rms_loss, ms_loss
 
+def minibatch_LSTD_withCV(trajectories, 
+                            Phi, 
+                            P, 
+                            V, 
+                            D, 
+                            R, 
+                            Gs,
+                            logger, 
+                            config,
+                            trajectories_test,
+                            Gs_test
+                            ):
+    lambda_ = config.default_lambda
+    gamma = config.gamma
+    LSTD_lambda = MiniBatchLSTDLambda(gamma, lambda_, Phi)
+    G = {}
+    running_loss = []
+    num_episodes = len(trajectories)
+    valid_episode_counter = 0
+    for ep in range(num_episodes):
+        G[ep] = []
+        traj = trajectories[ep]
+        ep_rewards = []
+        ep_states = []
+        cur_state, reward, next_state, done = traj[0]
+        LSTD_lambda.update(None, 0 , cur_state)
+        cur_state = next_state
+        #LSTD_lambda.reset_boyan(Phi[cur_state, :])
+        for timestep in range(len(traj)):
+            cur_state, reward, next_state, done = traj[timestep]
+            LSTD_lambda.update(cur_state, reward, next_state)
+            ep_rewards.append(reward)
+            ep_states.append(cur_state)
+            if done:
+                LSTD_lambda.update(next_state, 0, None)
+        theta = LSTD_lambda.theta
+        ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
+        # print('ep_discounted:{0}'.format(ep_discountedrewards))
+        if len(ep_discountedrewards) > 0:
+            ep_loss = np.mean(
+                [(np.dot(Phi[ep_states[t], :], theta) - ep_discountedrewards[t]) ** 2 for t in range(len(ep_states))])
+
+            G[ep] = ep_discountedrewards
+            running_loss.append(ep_loss)
+        # After we calculated the Theta parameter from the training data
+          
+        if valid_episode_counter % config.compute_cv_iterations == 0 and valid_episode_counter > 0:
+            #pudb.set_trace()
+            new_config = copy.deepcopy(config)
+            new_config.default_lambda = 0
+            current_cv_loss = compute_CV_loss(trajectories[:ep+1], 
+                                              Phi, 
+                                              P, 
+                                              V, 
+                                              D, 
+                                              R, 
+                                              Gs,
+                                              logger = None, 
+                                              config =new_config)
+            losses, avg_losses = calculate_batch_mspbe_msbe_mse_losses(trajectories_test, Gs_test, theta, Phi, R, D, P, new_config)
+            print('current_cv_loss:{0}'.format(current_cv_loss))
+            if logger:
+                #pudb.set_trace()
+                logger.log_scalar('Train mean loto cv', current_cv_loss, valid_episode_counter)
+                logger.log_scalar('Test RMSPBE', avg_losses['RMSPBE'], valid_episode_counter)
+                logger.log_scalar('Test RMSBE', avg_losses['RMSBE'], valid_episode_counter)
+                logger.log_scalar('Test RMSBE', avg_losses['RMSE'], valid_episode_counter)
+
+                logger.writer.flush()
+                        
+        valid_episode_counter += 1
+    #loss, rmse = calculate_batch_loss(trajectories, G, theta, Phi)
+    ms_loss, rms_loss = calculate_batch_mspbe_msbe_mse_losses(trajectories, G, theta, Phi, R, D, P, config)
+    return LSTD_lambda, theta, G, rms_loss, ms_loss
+
 def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
     # LSTD operator:
     LSTD_lambda = LSTD(num_features)
@@ -427,8 +502,8 @@ def Adaptive_LSTD_algorithm_batch_type2(trajectories,
     for ep in range(num_episodes):
         traj = trajectories[ep]
         G[ep] = [] 
-        if len(traj) <= 4:
-            continue
+#         if len(traj) <= 4:
+#             continue
         if valid_episode_counter % config.batch_size == 0:           
             ep_rewards = []
             ep_states = []
@@ -560,7 +635,7 @@ def compute_CV_loss(trajectories,
     for i in range(min(1000,num_episodes)):
         traj = trajectories[i]
         
-        if len(traj) <= 4:
+        if len(traj) <= 2:
             continue
         
         for j in range(len(traj)):
@@ -728,7 +803,7 @@ def Adaptive_LSTD_algorithm_batch_type3(trajectories,
             #pudb.set_trace()
             new_config = copy.deepcopy(config)
             new_config.default_lambda = lambda_
-            current_cv_loss = compute_CV_loss(trajectories, 
+            current_cv_loss = compute_CV_loss(trajectories[:ep+1], 
                                               Phi, 
                                               P, 
                                               V, 

@@ -7,8 +7,8 @@ import gym_walk
 import pudb
 
 def init_env(env_name, seed):
-    if env_name == 'RandomWalk-v0':
-        env = gym.make('RandomWalk-v0')
+    if 'Walk' in env_name:
+        env = gym.make(env_name)
     else:
         boyan_mdp = BOYAN_MDP('boyan_mdp.png')
         env = boyan_mdp.env
