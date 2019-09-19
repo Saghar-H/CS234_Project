@@ -19,15 +19,15 @@ def invert_matrix(term, rcond = 1e-14):
         print ('Inverse matrix failed...'+ e)
     return inv_term
 
-def compute_Psi(Phi, D, P, optimal_lambda, config):
-    term = np.eye(config.num_states) - config.gamma * optimal_lambda * P
+def compute_Psi(Phi, D, P, config):
+    term = np.eye(config.num_states) - config.gamma * config.default_lambda * P
     # finding inverse(term)
     inv_term = invert_matrix(term)    
     Psi = Phi.T @ D @ inv_term @( np.eye(config.num_states) - config.gamma * P) 
     return Psi
 
-def compute_H(Phi, D, P, optimal_lambda, config):
-    Psi = compute_Psi(Phi, D, P, optimal_lambda, config)
+def compute_H(Phi, D, P, config):
+    Psi = compute_Psi(Phi, D, P, config)
     term = np.dot(Psi, Phi)
     # finding inverse(term)
     inv_term = invert_matrix(term) 
@@ -352,25 +352,39 @@ def upsample_trajectories(G, trajectories, upsample_rate):
     all_trajectories_shuffled = [all_trajectories[i] for i in indices]
     return all_Gs_shuffled, all_trajectories_shuffled
 
-def calculate_batch_rmspbe_loss(trajectories, G, theta, Phi, R, D, P, lambda_, config):
+def calculate_batch_mspbe_msbe_mse_losses(trajectories, G, theta, Phi, R, D, P, config):
     '''
     :param theta: Value function parameter such that V= Phi * Theta
     :param trajectories: dictionary of episodes trajectories: {ep0 : [(state, reward, state_next, done), ...]}
     :param G: dictionary of episodes return values: {ep0 : [g0, g1, ... ]}
     :return: list of episodes loss, average over episodes's loss
     '''
-    H = compute_H(Phi, D, P, lambda_, config)
+    H = compute_H(Phi, D, P, config)
     BE = R + config.gamma * P @ Phi @ theta
     PBE = H @ BE
     num_episodes = len(trajectories)
-    loss = []
+    rmspbe_loss = []
+    rmsbe_loss = []
+    rmse_loss = []
+    avg_loss = {}
+    loss = {}
     for ep in range(num_episodes):
         traj = trajectories[ep]
         if len(traj) <= 4 or len(G[ep]) <= 0:
             continue
-        ep_loss = np.mean(
+        ep_rmspbe_loss = np.mean(
             [(np.dot(Phi[traj[t][0], :], theta) - PBE[traj[t][0]]) ** 2 for t in range(len(traj))])
-        loss.append(ep_loss)
-    avg_loss = (np.mean(loss)) ** 0.5
-    
+        rmspbe_loss.append(ep_rmspbe_loss)
+        ep_rmsbe_loss = np.mean(
+            [(np.dot(Phi[traj[t][0], :], theta) - BE[traj[t][0]]) ** 2 for t in range(len(traj))])
+        rmsbe_loss.append(ep_rmsbe_loss)
+        ep_rmse_loss = np.mean(
+            [(np.dot(Phi[traj[t][0], :], theta) - G[ep][t]) ** 2 for t in range(len(traj))])
+        rmse_loss.append(ep_rmse_loss)
+    avg_loss['RMSPBE'] = (np.mean(rmspbe_loss)) ** 0.5
+    avg_loss['RMSBE'] = (np.mean(rmsbe_loss)) ** 0.5
+    avg_loss['RMSE'] = (np.mean(rmse_loss)) ** 0.5
+    loss['MSPBE'] = rmspbe_loss
+    loss['MSBE'] = rmsbe_loss
+    loss['MSE'] = rmse_loss
     return loss, avg_loss

@@ -1,9 +1,10 @@
 import numpy as np
 from autograd_cls import AutoGrad 
-from compute_utils import compute_lcv_lambda_gradient, compute_epsilon_lambda_gradient, compute_hjj, compute_z, compute_z_gradient, compute_eps_t, compute_hjj_gradient, get_discounted_return, calculate_batch_loss, calculate_batch_rmspbe_loss, invert_matrix
+from compute_utils import compute_lcv_lambda_gradient, compute_epsilon_lambda_gradient, compute_hjj, compute_z, compute_z_gradient, compute_eps_t, compute_hjj_gradient, get_discounted_return, calculate_batch_loss, invert_matrix, calculate_batch_mspbe_msbe_mse_losses
 from lstd import LSTD, MiniBatchLSTDLambda
 from adam import ADAM
 import copy
+from pprint import pprint
 import pdb
 import pudb
 
@@ -50,11 +51,10 @@ def minibatch_LSTD(trajectories,
             G[ep] = ep_discountedrewards
             running_loss.append(ep_loss)
     # After we calculated the Theta parameter from the training data
-    loss, rmse = calculate_batch_loss(trajectories, G, theta, Phi)
-    #_,rmspbe = calculate_batch_rmspbe_loss(trajectories, G, theta, Phi, R, D, P, lambda_, config)
-    #average_loss = rmse
-    average_loss = loss
-    return LSTD_lambda, theta, average_loss, G
+
+    #loss, rmse = calculate_batch_loss(trajectories, G, theta, Phi)
+    ms_loss, rms_loss = calculate_batch_mspbe_msbe_mse_losses(trajectories, G, theta, Phi, R, D, P, config)
+    return LSTD_lambda, theta, G, rms_loss, ms_loss
 
 def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
     # LSTD operator:
@@ -90,7 +90,7 @@ def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
     loss, rmse = calculate_batch_loss(trajectories, G, theta, Phi)
     # print('episode loss:{0}'.format(loss))
     # print(LSTD_lambda.A, LSTD_lambda.b)
-    _,rmspbe = calculate_batch_rmspbe_loss(trajectories, G, theta, Phi, R, D, P, lambda_, config)
+    ms_loss,rms_loss = calculate_batch_mspbe_msbe_mse_losses(trajectories, G, theta, Phi, R, D, P, config)
     # print("average running loss in training: ", sum(running_loss) / num_episodes)
     # print("average loss after training: ", sum(loss) / num_episodes)
     average_loss = rmse
@@ -360,8 +360,11 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
                 running_loss.append(ep_loss)
         valid_episode_counter += 1
     # After we calculated the Theta parameter from the training data
-    loss, rmse = calculate_batch_loss(trajectories, G, theta, Phi)
-    _,rmspbe = calculate_batch_rmspbe_loss(trajectories, G, theta, Phi, R, D, P, lambda_, config)
+    #loss, rmse = calculate_batch_loss(trajectories, G, theta, Phi)
+    new_config = copy.deepcopy(config)
+    new_config.lambda_ = lambda_
+    ms_loss, rms_loss = calculate_batch_mspbe_msbe_mse_losses(trajectories, G, theta, Phi, R, D, P, config)
+
     print('Theta values: {0}'.format(theta))
     print('episode RMSPBE :{0}'.format(rmspbe))
     # print('episode loss:{0}'.format(loss))
@@ -369,7 +372,7 @@ def Adaptive_LSTD_algorithm_batch(trajectories,
     #print("Final Lambda: {0}".format(lambda_))
     #print("average running loss in training: ", np.mean(running_loss))
     #print("average loss after training: ", np.mean(loss))
-    return adaptive_LSTD_lambda, theta, rmse, rmspbe, G, lambda_
+    return adaptive_LSTD_lambda, theta, G, lambda_, ms_loss, rms_loss
 
 
 '''
@@ -562,15 +565,15 @@ def compute_CV_loss(trajectories,
             # leave one tuple oto_trajectoriesout
             loto_trajectories = copy.deepcopy(trajectories)
             del loto_trajectories[i][j]
-            model, _, loss, _ = minibatch_LSTD(loto_trajectories, 
-                                               Phi, 
-                                               P, 
-                                               V, 
-                                               D, 
-                                               R, 
-                                               Gs,
-                                               logger, 
-                                               config)
+            model, _ , _ , rms_loss, ms_loss = minibatch_LSTD(loto_trajectories, 
+                                                               Phi, 
+                                                               P, 
+                                                               V, 
+                                                               D, 
+                                                               R, 
+                                                               Gs,
+                                                               logger, 
+                                                               config)
             theta = model.theta
             #theta = [-24, -16, -8,0]
             # pdb.set_trace()
@@ -578,7 +581,7 @@ def compute_CV_loss(trajectories,
             loto_loss.append(tuple_loss)
             
         if logger:
-            logger.log_scalar('average trajectories loss', loss, step)
+            logger.log_scalar('average trajectories loss', rms_loss, step)
             logger.log_scalar('current tuple loto cv', tuple_loss, step)
             logger.log_scalar('mean loto cv', np.mean(loto_loss)**.5, step)
             logger.writer.flush()
@@ -721,7 +724,7 @@ def Adaptive_LSTD_algorithm_batch_type3(trajectories,
         if valid_episode_counter % config.compute_cv_iterations == 0:
             #pudb.set_trace()
             new_config = copy.deepcopy(config)
-            new_config.default_lambda = lambda_
+            new_config.default_lambda = 0#lambda_
             current_cv_loss = compute_CV_loss(trajectories, 
                                               Phi, 
                                               P, 
@@ -747,13 +750,12 @@ def Adaptive_LSTD_algorithm_batch_type3(trajectories,
                 running_loss.append(ep_loss)
         valid_episode_counter += 1
     # After we calculated the Theta parameter from the training data
-    loss, rmse = calculate_batch_loss(trajectories, G, theta, Phi)
-    _,rmspbe = calculate_batch_rmspbe_loss(trajectories, G, theta, Phi, R, D, P, lambda_, config)
+    losses,avg_losses = calculate_batch_mspbe_msbe_mse_losses(trajectories, G, theta, Phi, R, D, P, config)
     print('Theta values: {0}'.format(theta))
-    print('episode RMSPBE :{0}'.format(rmspbe))
+    print('avg_losses:{0}'.format(avg_losses))
     # print('episode loss:{0}'.format(loss))
     # print(LSTD_lambda.A, LSTD_lambda.b)
     #print("Final Lambda: {0}".format(lambda_))
     #print("average running loss in training: ", np.mean(running_loss))
     #print("average loss after training: ", np.mean(loss))
-    return adaptive_LSTD_lambda, theta, rmse, G, lambda_
+    return adaptive_LSTD_lambda, theta, avg_losses, G, lambda_

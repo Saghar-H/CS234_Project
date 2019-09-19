@@ -12,6 +12,7 @@ from lstd_algorithms import minibatch_LSTD, LSTD_algorithm, Adaptive_LSTD_algori
 from compute_utils import get_discounted_return, compute_P
 from env_utils import init_env, run_env_episodes_boyan, run_env_episodes_walk
 from Config import Config
+from pprint import pprint
 import pudb
 
 
@@ -23,7 +24,7 @@ parser.add_argument('--lr', type=float, default=0.2)
 parser.add_argument('--episodes', type=int, default=100)
 parser.add_argument('--batch', type=int, default=4)
 parser.add_argument('--default_lambda', type=float, default=0.75)
-parser.add_argument('--gamma', type=float, default=.80)
+parser.add_argument('--gamma', type=float, default=.0)
 parser.add_argument('--rand_lambda', type=bool, default=False)
 parser.add_argument('--walk_type', type=str, default='tabular')
 
@@ -170,7 +171,7 @@ if log_events:
 
 if config.use_adaptive_lambda:
     print('Running the Adaptive LSTD Lambda Algorithm ...')
-    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm_batch_type3(
+    adaptive_LSTD_lambda, adaptive_theta, adaptive_avg_losses, adaptive_G, adaptive_lambda_val = Adaptive_LSTD_algorithm_batch_type3(
                                                                                                                     trajectories, 
                                                                                                                     Phi, 
                                                                                                                     P, 
@@ -249,3 +250,4 @@ print(config_prefix)
 #                      file_paths = fig_file_names,
 #                      random_init_lambda = config.random_init_lambda
 #                      )
+
