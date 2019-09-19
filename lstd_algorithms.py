@@ -40,9 +40,10 @@ def minibatch_LSTD(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
             running_loss.append(ep_loss)
     # After we calculated the Theta parameter from the training data
     loss, rmse = calculate_batch_loss(trajectories, G, theta, Phi)
-    _,rmspbe = calculate_batch_rmspbe_loss(trajectories, G, theta, Phi, R, D, P, lambda_, config)
-    average_loss = rmse
-    return LSTD_lambda, theta, average_loss, G, rmspbe
+    #_,rmspbe = calculate_batch_rmspbe_loss(trajectories, G, theta, Phi, R, D, P, lambda_, config)
+    #average_loss = rmse
+    average_loss = loss
+    return LSTD_lambda, theta, average_loss, G
 
 def LSTD_algorithm(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
     # LSTD operator:
@@ -693,7 +694,7 @@ def Adaptive_LSTD_algorithm_batch_type3(trajectories,
                 print('gradient: {0}'.format(grad))
                 print('current lambda:{0}'.format(lambda_))
                 print('current theta:{0}'.format(theta))
-                
+          
         if valid_episode_counter % config.compute_cv_iterations == 0:
             #pudb.set_trace()
             current_cv_loss = compute_CV_loss(trajectories[:ep+1], 

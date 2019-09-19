@@ -120,13 +120,13 @@ def draw_box_grid_search_adaptive_lambda(env,
         for j in range(gamma_length):
             lambdas[j].append(gamma_lambda_loss[j,1])
             losses[j].append(gamma_lambda_loss[j,2])
-            rmspbes[j].append(gamma_lambda_rmspbe[j,3])
+            #rmspbes[j].append(gamma_lambda_rmspbe[j,3])
         seed += seed_step_size
 
     for k in range(gamma_length):
         lambda_data.append(lambdas[k])
         loss_data.append(losses[k])
-        rmspbe_data.append(rmspbes[k])
+        #rmspbe_data.append(rmspbes[k])
     ###Plot lambda box plot:
     fig = plt.figure(1, figsize=(9, 6))
     ax = fig.add_subplot(111)
