@@ -24,7 +24,7 @@ parser.add_argument('--lr', type=float, default=0.2)
 parser.add_argument('--episodes', type=int, default=100)
 parser.add_argument('--batch', type=int, default=4)
 parser.add_argument('--default_lambda', type=float, default=0.75)
-parser.add_argument('--gamma', type=float, default=.0)
+parser.add_argument('--gamma', type=float, default=.9)
 parser.add_argument('--rand_lambda', type=bool, default=False)
 parser.add_argument('--walk_type', type=str, default='tabular')
 
