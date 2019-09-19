@@ -55,7 +55,7 @@ config = Config(
     gamma = args.gamma,
     default_lambda = args.default_lambda,
     lr = args.lr,
-    use_adaptive_lambda = False,
+    use_adaptive_lambda = True,
     grad_clip_norm = 10,
     compute_autograd = False,
     use_adam_optimizer = True,
@@ -189,7 +189,7 @@ if config.use_adaptive_lambda:
     print('Adaptive Lambda Value: {0}'.format(selected_lambda))
 else:
     print('Using default Lambda : {0}'.format(config.default_lambda))
-    pudb.set_trace()
+    #pudb.set_trace()
     new_config = copy.deepcopy(config)
     new_config.default_lambda = 0
     adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G= minibatch_LSTD_withCV(trajectories, 

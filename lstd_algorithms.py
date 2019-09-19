@@ -729,11 +729,12 @@ def Adaptive_LSTD_algorithm_batch_type3(trajectories,
         if logger:
             logger.log_scalar('average trajectories reward', np.mean(ep_rewards),  valid_episode_counter)
             logger.writer.flush()
-
+        #pdb.set_trace()
         theta = adaptive_LSTD_lambda.theta
         A = adaptive_LSTD_lambda.A
         b = adaptive_LSTD_lambda.b.reshape((-1,1))
-        A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon, rcond=.1)
+        #A_inv = np.linalg.pinv(A + np.eye(A.shape[0]) * config.A_inv_epsilon, rcond=.1)
+        A_inv = invert_matrix(A)
         
         for timestep in range(len(traj)-1):
             cur_state, reward, next_state, done = traj[timestep]
