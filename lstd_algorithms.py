@@ -8,7 +8,18 @@ import pdb
 import pudb
 
 
-def minibatch_LSTD(trajectories, Phi, num_features, gamma=0.4, lambda_=0.2):
+def minibatch_LSTD(trajectories, 
+                            Phi, 
+                            P, 
+                            V, 
+                            D, 
+                            R, 
+                            Gs,
+                            logger, 
+                            config
+                            ):
+    lambda_ = config.default_lambda
+    gamma = config.gamma
     LSTD_lambda = MiniBatchLSTDLambda(gamma, lambda_, Phi)
     G = {}
     running_loss = []
