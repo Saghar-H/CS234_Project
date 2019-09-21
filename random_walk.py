@@ -56,7 +56,7 @@ config = Config(
     gamma = args.gamma,
     default_lambda = args.default_lambda,
     lr = args.lr,
-    use_adaptive_lambda = False,
+    use_adaptive_lambda = True,
     grad_clip_norm = 10,
     compute_autograd = False,
     use_adam_optimizer = True,
@@ -218,17 +218,8 @@ else:
                                                                                                                     trajectories_test,
                                                                                                                     Gs_test
                                                                                                                     )
-    adaptive_LSTD_lambda, adaptive_theta, adaptive_G, adaptive_loss, adaptive_loss= minibatch_LSTD(trajectories, 
-                                                                                                        Phi, 
-                                                                                                        P, 
-                                                                                                        V, 
-                                                                                                        D, 
-                                                                                                        R, 
-                                                                                                        Gs,
-                                                                                                        logger, 
-                                                                                                        config
-                                                                                                        )
 print(adaptive_theta)
+selected_lambda = config.default_lambda
 logger = None
 if log_events:
     import os

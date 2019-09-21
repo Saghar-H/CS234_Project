@@ -151,29 +151,35 @@ def run_env_episodes_taxi(env, config, mode):
     total_steps = 0
     num_episodes = config.num_train_episodes if mode == 'train' else config.num_test_episodes
     env.render()
-    for ep in range(num_episodes):
-        trajectories.append([])
+    ep = 0
+    #for ep in range(num_episodes):
+
+    while ep <= num_episodes:
+        #trajectories.append([])
         cur_state = env.reset()
         done = False
         ep_rewards = []
         ep_states = []
+        traj = []
         done = False
         while not done:
             action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
-            trajectories[ep].append((cur_state, reward, next_state, done))
+            traj.append((cur_state, reward, next_state, done))
             D[cur_state] += 1
             total_steps += 1
             ep_rewards.append(reward)
             ep_states.append(cur_state)
             cur_state = next_state
+        if len(ep_states) <= 500 :
+            trajectories.append(traj)
+            ep += 1
+            ep_discountedrewards = get_discounted_return(ep_rewards, config.gamma)
+            Gs.append(ep_discountedrewards)
 
-        ep_discountedrewards = get_discounted_return(ep_rewards, config.gamma)
-        Gs.append(ep_discountedrewards)
-
-        for i in range(len(ep_states)):
-            V[ep_states[i]] += ep_discountedrewards[i]
-            R[ep_states[i]] += ep_rewards[i]
+            for i in range(len(ep_states)):
+                V[ep_states[i]] += ep_discountedrewards[i]
+                R[ep_states[i]] += ep_rewards[i]
 
     return np.diag(D / total_steps), V / D, trajectories, Gs, R/D
     

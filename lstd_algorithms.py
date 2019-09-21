@@ -75,6 +75,7 @@ def minibatch_LSTD_withCV(trajectories,
     running_loss = []
     num_episodes = len(trajectories)
     valid_episode_counter = 0
+    
     for ep in range(num_episodes):
         G[ep] = []
         traj = trajectories[ep]
@@ -697,7 +698,6 @@ def Adaptive_LSTD_algorithm_batch_type3(trajectories,
     adam_optimizer = ADAM(x_init = config.default_lambda, alpha=config.lr)
     lambda_ = config.default_lambda
     valid_episode_counter = 0
-    
     for ep in range(config.num_train_episodes):
         traj = trajectories[ep]
         G[ep] = [] 
@@ -775,6 +775,7 @@ def Adaptive_LSTD_algorithm_batch_type3(trajectories,
                                                                                                              )
         # update the gradients of the batch:
         if valid_episode_counter % config.batch_size == 0 and valid_episode_counter > 0: 
+            #pdb.set_trace()
             grad = compute_lcv_lambda_gradient(eps, 
                                                H_diag, 
                                                ep_states, 
