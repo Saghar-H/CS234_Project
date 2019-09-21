@@ -11,7 +11,7 @@ from grid_search_utils import find_optimal_lambda_grid_search, find_adaptive_opt
 from grid_search_utils import draw_box_grid_search_adaptive_lambda, draw_box_grid_search_optimal_lambda
 from lstd_algorithms import minibatch_LSTD, LSTD_algorithm, Adaptive_LSTD_algorithm, Adaptive_LSTD_algorithm_batch, Adaptive_LSTD_algorithm_batch_type2, compute_CV_loss, Adaptive_LSTD_algorithm_batch_type3, minibatch_LSTD_withCV
 from compute_utils import get_discounted_return, compute_P
-from env_utils import init_env, run_env_episodes_boyan, run_env_episodes_walk
+from env_utils import init_env, run_env_episodes_boyan, run_env_episodes_walk, run_env_episodes_taxi, taxi_env_features
 from Config import Config
 from pprint import pprint
 import pudb
@@ -24,7 +24,7 @@ parser.add_argument('--seed', type=int, default=1358)
 parser.add_argument('--lr', type=float, default= 0.5)
 parser.add_argument('--episodes', type=int, default=100)
 parser.add_argument('--batch', type=int, default=4)
-parser.add_argument('--default_lambda', type=float, default=0.05)
+parser.add_argument('--default_lambda', type=float, default=0.5)
 parser.add_argument('--gamma', type=float, default=.8)
 parser.add_argument('--rand_lambda', type=bool, default=False)
 parser.add_argument('--walk_type', type=str, default='tabular')
@@ -44,8 +44,9 @@ if log_events:
 #if randomwwalk: tabular, inverted: num_features = 5, num_states = 5, dependent = 3,5
 config = Config(
     seed = args.seed,
-    env_name = 'RandomWalkFive-v0',
+    #env_name = 'RandomWalkFive-v0',
     #env_name = 'Boyan',
+    env_name = 'Taxi',
     walk_type = args.walk_type,
     num_features = 7,#4,
     num_states = 7,#13,
@@ -55,7 +56,7 @@ config = Config(
     gamma = args.gamma,
     default_lambda = args.default_lambda,
     lr = args.lr,
-    use_adaptive_lambda = True,
+    use_adaptive_lambda = False,
     grad_clip_norm = 10,
     compute_autograd = False,
     use_adam_optimizer = True,
@@ -81,10 +82,14 @@ if 'Walk' in config.env_name:
     D, V, trajectories, Gs, R = run_env_episodes_walk(env, config, 'train')
     D_test, V_test, trajectories_test, Gs_test, R_test = run_env_episodes_walk(env, config, 'test')
     
-else:
+elif 'Boyan' in config.env_name:
     transition_probs = env.transitions
     D, V, trajectories, Gs, R = run_env_episodes_boyan(env, config, 'train')
     D_test, V_test, trajectories_test, Gs_test, R_test = run_env_episodes_boyan(env, config, 'test')
+elif 'Taxi' in config.env_name:
+    transition_probs = env.P
+    D, V, trajectories, Gs, R = run_env_episodes_taxi(env, config, 'train')
+    D_test, V_test, trajectories_test, Gs_test, R_test = run_env_episodes_taxi(env, config, 'test')
 print("###############Transition Probabilities####################")
 print(transition_probs)
 ##Upsample 1's:
@@ -119,17 +124,25 @@ if 'Walk' in config.env_name:
 
     else:
         Phi = np.array(np.random.rand(config.num_states, config.num_features))
-else:
+elif 'Boyan' in config.env_name:
     Phi= 1/4 * np.array([[4, 0,0,0],[3,1,0,0],[2,2,0,0],[1,3,0,0],[0,4,0,0],[0,3,1,0], [0,2,2,0], [0,1,3,0], [0,0,4,0],
                         [0,0,3,1], [0,0,2,2], [0,0,1,3], [0,0,0,4]])
     config.num_features = 4
     config.num_states = 13  
+elif '2048' in config.env_name:
+    config.num_features = 16
+    config.num_states = 15**16
+    Phi = np.array(np.random.rand(config.num_states, config.num_features))
+elif 'Taxi' in config.env_name:
+    config.num_features = 25
+    config.num_states = 500
+    Phi = taxi_env_features(transition_probs)
 
 '''
 Now compute the MRP value of P: P(s'|s)
 '''
 
-if 'Walk' in config.env_name:
+if 'Walk' in config.env_name or 'Taxi' in config.env_name:
     P = compute_P(transition_probs, env.action_space.n, env.observation_space.n)
 else:
     transitions = transition_probs
@@ -193,19 +206,29 @@ else:
     #pudb.set_trace()
     new_config = copy.deepcopy(config)
     new_config.default_lambda = 0
-    adaptive_LSTD_lambda, adaptive_theta, adaptive_loss, adaptive_G= minibatch_LSTD_withCV(trajectories, 
-                                                                                    Phi, 
-                                                                                    P, 
-                                                                                    V, 
-                                                                                    D, 
-                                                                                    R, 
-                                                                                    Gs,
-                                                                                    logger, 
-                                                                                    new_config,
-                                                                                    trajectories_test,
-                                                                                    Gs_test
-                                                                                    )
-
+    adaptive_LSTD_lambda, adaptive_theta, adaptive_G, adaptive_ms_loss, adaptive_rms_loss = minibatch_LSTD_withCV(trajectories, 
+                                                                                                                    Phi, 
+                                                                                                                    P, 
+                                                                                                                    V, 
+                                                                                                                    D, 
+                                                                                                                    R, 
+                                                                                                                    Gs,
+                                                                                                                    logger, 
+                                                                                                                    new_config,
+                                                                                                                    trajectories_test,
+                                                                                                                    Gs_test
+                                                                                                                    )
+    adaptive_LSTD_lambda, adaptive_theta, adaptive_G, adaptive_loss, adaptive_loss= minibatch_LSTD(trajectories, 
+                                                                                                        Phi, 
+                                                                                                        P, 
+                                                                                                        V, 
+                                                                                                        D, 
+                                                                                                        R, 
+                                                                                                        Gs,
+                                                                                                        logger, 
+                                                                                                        config
+                                                                                                        )
+print(adaptive_theta)
 logger = None
 if log_events:
     import os

@@ -93,6 +93,7 @@ def minibatch_LSTD_withCV(trajectories,
                 LSTD_lambda.update(next_state, 0, None)
         theta = LSTD_lambda.theta
         ep_discountedrewards = get_discounted_return(ep_rewards, gamma)
+        #pdb.set_trace()
         # print('ep_discounted:{0}'.format(ep_discountedrewards))
         if len(ep_discountedrewards) > 0:
             ep_loss = np.mean(
