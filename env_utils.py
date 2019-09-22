@@ -6,21 +6,25 @@ import numpy as np
 import random
 from boyan_exp import BOYAN_MDP
 from compute_utils import get_discounted_return
-import gym_walk
 import pudb
 import pdb
 
 def init_env(env_name, seed):
     if 'Walk' in env_name:
+        import gym_walk
         env = gym.make(env_name)
     elif 'Boyan' in env_name:
         boyan_mdp = BOYAN_MDP('boyan_mdp.png')
         env = boyan_mdp.env
     elif '2048' in env_name:
         env = gym.make('2048-v0')
-    elif 'Taxi' in env_name:
+    elif 'Taxi_5' in env_name:
         #env = gym.make('Taxi-v2')
         env = taxi.TaxiEnv()
+    elif 'Taxi_3' in env_name:
+       import gym_taxi
+       env = gym.make('Taxi-v4')
+
     env.reset()
     random.seed(seed)
     env.seed(seed)
@@ -171,7 +175,7 @@ def run_env_episodes_taxi(env, config, mode):
             ep_rewards.append(reward)
             ep_states.append(cur_state)
             cur_state = next_state
-        if len(ep_states) <= 500 :
+        if len(ep_states) <= 50 :
             trajectories.append(traj)
             ep += 1
             ep_discountedrewards = get_discounted_return(ep_rewards, config.gamma)
@@ -183,14 +187,17 @@ def run_env_episodes_taxi(env, config, mode):
 
     return np.diag(D / total_steps), V / D, trajectories, Gs, R/D
     
-def taxi_env_features(P):
-    locs = [(0,0), (0,4), (4,0), (4,3)]
-    Phi = np.zeros((500, 25))
+def taxi_env_features(P, grid_size):
+    
+    locs = [(0,0), (0,grid_size-1), (grid_size-1,0), (grid_size-1,grid_size-2)]
+    ns = 20*grid_size**2
+    nf = grid_size**2
+    Phi = np.zeros((ns, nf))
     states = list(set(P.keys()))
-    for i in range(500):
+    for i in range(ns):
         state = states[i]
-        feature = np.zeros((5,5))
-        taxirow, taxicol, passloc, destidx = taxi_state_decode(state)
+        feature = np.zeros((grid_size, grid_size))
+        taxirow, taxicol, passloc, destidx = taxi_state_decode(state, grid_size)
         feature[taxirow, taxicol] += 1
         if passloc == 4:
             feature[taxirow, taxicol] += 1/4
@@ -201,15 +208,15 @@ def taxi_env_features(P):
         Phi[i, :] = feature
     return Phi
 
-def taxi_state_decode(i):
+def taxi_state_decode(i, grid_size):
     out = []
     out.append(i % 4)
     i = i // 4
-    out.append(i % 5)
+    out.append(i % grid_size)
     i = i // 5
-    out.append(i % 5)
-    i = i // 5
+    out.append(i % grid_size)
+    i = i // grid_size
     out.append(i)
-    assert 0 <= i < 5
+    assert 0 <= i < 3
     return reversed(out)
     

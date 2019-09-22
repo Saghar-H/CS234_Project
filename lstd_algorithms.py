@@ -108,7 +108,7 @@ def minibatch_LSTD_withCV(trajectories,
             #pudb.set_trace()
             new_config = copy.deepcopy(config)
             new_config.default_lambda = 0
-            current_cv_loss = compute_CV_loss(trajectories[:ep+1], 
+            current_cv_loss = compute_CV_loss(trajectories, 
                                               Phi, 
                                               P, 
                                               V, 

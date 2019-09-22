@@ -15,6 +15,8 @@ from env_utils import init_env, run_env_episodes_boyan, run_env_episodes_walk, r
 from Config import Config
 from pprint import pprint
 import pudb
+import pickle
+import pathlib
 
 
 ################# Input Arguments ################
@@ -23,7 +25,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=1358)
 parser.add_argument('--lr', type=float, default= 0.5)
 parser.add_argument('--episodes', type=int, default=100)
-parser.add_argument('--batch', type=int, default=4)
+parser.add_argument('--batch', type=int, default=1)
 parser.add_argument('--default_lambda', type=float, default=0.5)
 parser.add_argument('--gamma', type=float, default=.8)
 parser.add_argument('--rand_lambda', type=bool, default=False)
@@ -46,7 +48,7 @@ config = Config(
     seed = args.seed,
     #env_name = 'RandomWalkFive-v0',
     #env_name = 'Boyan',
-    env_name = 'Taxi',
+    env_name = 'Taxi_3',
     walk_type = args.walk_type,
     num_features = 7,#4,
     num_states = 7,#13,
@@ -69,6 +71,7 @@ config = Config(
     random_init_lambda = args.rand_lambda,
     rcond = 1e-14,
     compute_cv_iterations = 10,
+    taxi_grid_size = 3,
 )
 
 ##########################################################
@@ -86,10 +89,42 @@ elif 'Boyan' in config.env_name:
     transition_probs = env.transitions
     D, V, trajectories, Gs, R = run_env_episodes_boyan(env, config, 'train')
     D_test, V_test, trajectories_test, Gs_test, R_test = run_env_episodes_boyan(env, config, 'test')
-elif 'Taxi' in config.env_name:
+elif 'Taxi_5' in config.env_name:
     transition_probs = env.P
-    D, V, trajectories, Gs, R = run_env_episodes_taxi(env, config, 'train')
-    D_test, V_test, trajectories_test, Gs_test, R_test = run_env_episodes_taxi(env, config, 'test')
+    file = pathlib.Path("train_D_V_traj_Gs_R.pkl")
+    if file.exists():
+        with open('train_D_V_traj_Gs_R.pkl', 'rb') as f:  # Python 3: open(..., 'rb')
+            D, V, trajectories, Gs, R = pickle.load(f)
+    else:
+        D, V, trajectories, Gs, R = run_env_episodes_taxi(env, config, 'train')
+        with open('train_D_V_traj_Gs_R.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+            pickle.dump([D, V, trajectories, Gs, R], f)  
+    file = pathlib.Path("test_D_V_traj_Gs_R.pkl")
+    if file.exists():
+        with open('test_D_V_traj_Gs_R.pkl', 'rb') as f:  # Python 3: open(..., 'rb')
+            D_test, V_test, trajectories_test, Gs_test, R_test = pickle.load(f)
+    else:
+        D_test, V_test, trajectories_test, Gs_test, R_test = run_env_episodes_taxi(env, config, 'test')
+        with open('test_D_V_traj_Gs_R.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+            pickle.dump([D_test, V_test, trajectories_test, Gs_test, R_test], f) 
+elif 'Taxi_3' in config.env_name:
+    transition_probs = env.env.P
+    file = pathlib.Path("small_train_D_V_traj_Gs_R.pkl")
+    if file.exists():
+        with open('small_train_D_V_traj_Gs_R.pkl', 'rb') as f:  # Python 3: open(..., 'rb')
+            D, V, trajectories, Gs, R = pickle.load(f)
+    else:
+        D, V, trajectories, Gs, R = run_env_episodes_taxi(env, config, 'train')
+        with open('small_train_D_V_traj_Gs_R.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+            pickle.dump([D, V, trajectories, Gs, R], f)  
+    file = pathlib.Path("small_test_D_V_traj_Gs_R.pkl")
+    if file.exists():
+        with open('small_test_D_V_traj_Gs_R.pkl', 'rb') as f:  # Python 3: open(..., 'rb')
+            D_test, V_test, trajectories_test, Gs_test, R_test = pickle.load(f)
+    else:
+        D_test, V_test, trajectories_test, Gs_test, R_test = run_env_episodes_taxi(env, config, 'test')
+        with open('small_test_D_V_traj_Gs_R.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+            pickle.dump([D_test, V_test, trajectories_test, Gs_test, R_test], f) 
 print("###############Transition Probabilities####################")
 print(transition_probs)
 ##Upsample 1's:
@@ -134,9 +169,9 @@ elif '2048' in config.env_name:
     config.num_states = 15**16
     Phi = np.array(np.random.rand(config.num_states, config.num_features))
 elif 'Taxi' in config.env_name:
-    config.num_features = 25
-    config.num_states = 500
-    Phi = taxi_env_features(transition_probs)
+    config.num_features = config.taxi_grid_size ** 2
+    config.num_states = 20 * config.taxi_grid_size ** 2
+    Phi = taxi_env_features(transition_probs, config.taxi_grid_size)
 
 '''
 Now compute the MRP value of P: P(s'|s)
